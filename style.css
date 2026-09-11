@@ -1,0 +1,221 @@
+:root {
+  --groen: #1b5e20;
+  --groen-donker: #0d3d12;
+  --groen-licht: #4c8c4a;
+  --water: #0d47a1;
+  --achtergrond: #f2f5f2;
+  --kaart: #ffffff;
+  --tekst: #222;
+  --grijs: #666;
+  --rand: #ddd;
+  --fout: #b71c1c;
+  --ok: #2e7d32;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--achtergrond);
+  color: var(--tekst);
+  line-height: 1.4;
+}
+
+header {
+  background: linear-gradient(135deg, var(--groen-donker), var(--groen));
+  color: #fff;
+  padding: 16px 16px 20px;
+  text-align: center;
+}
+
+header h1 { font-size: 1.5rem; }
+.hook { margin-right: 4px; }
+.sub { font-size: 0.9rem; opacity: 0.9; margin-top: 4px; }
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 12px 12px 40px;
+}
+
+.card {
+  background: var(--kaart);
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  font-size: 1.05rem;
+  color: var(--groen);
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--groen-licht);
+  padding-bottom: 6px;
+}
+
+label {
+  display: block;
+  margin: 12px 0 4px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+label small { font-weight: 400; color: var(--grijs); }
+
+input[type="date"],
+input[type="number"],
+input[type="text"],
+input[type="url"],
+select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid var(--rand);
+  border-radius: 8px;
+  background: #fff;
+}
+
+input:focus, select:focus { outline: 2px solid var(--groen-licht); }
+
+#kaartContainer {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 2px solid var(--groen-licht);
+  background: #e9f0e9;
+  touch-action: manipulation;
+}
+
+#kaartImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+#marker {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -100%);
+  background: radial-gradient(circle at 50% 30%, #ff5a5a 0, #c62828 70%, #8e0000 100%);
+  border: 2.5px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  rotate: -45deg;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+  pointer-events: none;
+  z-index: 5;
+}
+#marker.hidden, .hidden { display: none !important; }
+
+.kaart-hint {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 6;
+  white-space: nowrap;
+}
+
+.gps-status {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--ok);
+}
+.gps-status.waarschuwing { color: var(--fout); }
+
+.locatie-info {
+  font-size: 0.85rem;
+  color: var(--grijs);
+  margin-top: 6px;
+  min-height: 1.1em;
+  word-break: break-word;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+button {
+  flex: 1;
+  min-width: 140px;
+  padding: 11px 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: var(--groen-licht);
+  color: #fff;
+  cursor: pointer;
+}
+button:active { transform: scale(0.98); }
+
+button.primary {
+  width: 100%;
+  margin-top: 16px;
+  background: linear-gradient(135deg, var(--groen), var(--groen-licht));
+  font-size: 1.05rem;
+  padding: 13px;
+}
+
+button.btn-secondary {
+  background: #e0e0e0;
+  color: #333;
+  flex: 0 1 auto;
+}
+
+#verstuurBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+#uploadStatus { margin-top: 10px; font-size: 0.9rem; }
+#uploadStatus.ok { color: var(--ok); }
+#uploadStatus.fout { color: var(--fout); }
+
+#registratieLijst { list-style: none; }
+#registratieLijst li {
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--rand);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+#registratieLijst li .info { font-size: 0.9rem; }
+#registratieLijst li .info b { font-size: 0.95rem; }
+#registratieLijst li .klein { font-size: 0.78rem; color: var(--grijs); }
+#registratieLijst li .verwijder {
+  background: none;
+  color: var(--fout);
+  font-size: 1.3rem;
+  min-width: 34px;
+  flex: 0 0 auto;
+  padding: 2px 6px;
+}
+#registratieLijst li .status-sync {
+  font-size: 0.7rem;
+  color: var(--grijs);
+  margin-top: 2px;
+}
+#registratieLijst li .status-sync.synced { color: var(--ok); }
+
+.sync-status { font-size: 0.85rem; color: var(--grijs); margin-top: 8px; }
+
+.hulp { font-size: 0.8rem; color: var(--grijs); margin-top: 6px; }
+
+footer {
+  text-align: center;
+  padding: 14px;
+  font-size: 0.78rem;
+  color: var(--grijs);
+}

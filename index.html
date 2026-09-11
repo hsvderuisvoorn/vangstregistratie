@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1b5e20">
+  <title>Vangstregister</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1><span class="hook">🎣</span> Vangstregister</h1>
+    <p class="sub">Meld je vangst in 30 seconden</p>
+  </header>
+
+  <main>
+    <section id="kaartSectie" class="card">
+      <h2>1. Waar heb je gevist?</h2>
+      <div id="kaartContainer">
+        <img id="kaartImg" src="vijverkaart.jpg"
+             onerror="this.onerror=null; this.src='vijverkaart.svg';"
+             alt="Plattegrond van de vijver" draggable="false">
+        <div id="marker" class="hidden"></div>
+        <div id="kaartHint" class="kaart-hint">Tik op de plek waar je hebt gevist 👆</div>
+      </div>
+      <div id="gpsStatus" class="gps-status hidden"></div>
+      <div class="btn-row">
+        <button id="gpsBtn" type="button">📍 Automatische GPS-locatie</button>
+        <button id="gpsResetBtn" type="button" class="btn-secondary">↺ Wissen</button>
+      </div>
+      <p id="locatieInfo" class="locatie-info"></p>
+    </section>
+
+    <section id="formSectie" class="card">
+      <h2>2. Wat heb je gevangen?</h2>
+
+      <label for="datum">Datum</label>
+      <input type="date" id="datum" required>
+
+      <label for="soort">Vissoort</label>
+      <select id="soort">
+        <option value="">Kies een soort...</option>
+        <option>Baars</option>
+        <option>Blankvoorn</option>
+        <option>Brasem</option>
+        <option>Karper</option>
+        <option>Kolblei</option>
+        <option>Meerval</option>
+        <option>Paling</option>
+        <option>Rietvoorn</option>
+        <option>Riviergrondel</option>
+        <option>Roofblei</option>
+        <option>Snoek</option>
+        <option>Snoekbaars</option>
+        <option>Winde</option>
+        <option>Zeelt</option>
+        <option>Overig...</option>
+      </select>
+      <input type="text" id="soortOverig" placeholder="Welke soort?" class="hidden">
+
+      <label for="aantal">Aantal vissen</label>
+      <input type="number" id="aantal" min="1" step="1" inputmode="numeric" placeholder="Bijv. 3">
+
+      <label for="visser">Visser <small>(optioneel)</small></label>
+      <input type="text" id="visser" placeholder="Naam of anoniem" autocomplete="name">
+
+      <label for="opmerking">Opmerking <small>(optioneel)</small></label>
+      <input type="text" id="opmerking" placeholder="Bijv. roofblei van 2 kg, gevangen op dropshot">
+
+      <div id="uploadStatus" class="upload-status hidden"></div>
+
+      <button id="verstuurBtn" type="button" class="primary">Registreer vangst</button>
+    </section>
+
+    <section id="lijstSectie" class="card hidden">
+      <h2>3. Mijn recente registraties</h2>
+      <ul id="registratieLijst"></ul>
+      <div class="btn-row">
+        <button id="exportBtn" type="button">⬇ Exporteren (JSON)</button>
+        <button id="syncBtn" type="button">⇅ Opnieuw versturen</button>
+      </div>
+      <p id="syncStatus" class="sync-status"></p>
+    </section>
+
+    <section id="adminSectie" class="card">
+      <h2>Instellingen vereniging</h2>
+      <label for="backendUrl">Backend-URL (Google Apps Script, eindigt op /exec)</label>
+      <input type="url" id="backendUrl" placeholder="https://script.google.com/macros/s/.../exec">
+      <p class="hulp">Zet de URL uit de installatiehandleiding hier neer. Leeg = alleen lokaal opslaan op dit toestel.</p>
+      <div class="btn-row">
+        <button id="opslaanSettingsBtn" type="button">Instellingen opslaan</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Meldingen zonder backend worden lokaal bewaard en later opnieuw verstuurd.</p>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    }
+  </script>
+</body>
+</html>

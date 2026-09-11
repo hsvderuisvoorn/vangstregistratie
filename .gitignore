@@ -1,0 +1,9 @@
+# Configuratie-bestanden
+*.local
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Applicatie-data (nooit committen)
+node_modules/
