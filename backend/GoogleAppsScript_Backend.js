@@ -42,7 +42,7 @@ function doGet() {
 
 function stuurMelding(data, soorten, plaatsOpGps) {
   try {
-    var ontvanger = "paul@hsvderuisvoorn.nl";
+    var ontvanger = "jpgpthijssen@gmail.com";
     var soortenRegels = [];
     var totaal = 0;
     for (var i = 0; i < soorten.length; i++) {
