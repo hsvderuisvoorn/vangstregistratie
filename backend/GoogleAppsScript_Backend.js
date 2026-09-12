@@ -480,7 +480,8 @@ function bouwGrafiekPlaats(data) {
     titel.setFontWeight("bold");
 
     // data van dit diagram: elke soort is een eigen reeks (net als in Grafiek - Jaar)
-    var dataRij = 3 + i;
+    // 3 rijen per blok zodat de data van elk diagram elkaar niet overschrijft
+    var dataRij = 3 + i * 3;
     var kop = ["Plaats"].concat(soortNamen);
     var waarden = ["Plaats " + nr2];
     for (var s = 0; s < soortNamen.length; s++) waarden.push(soorten[soortNamen[s]]);
