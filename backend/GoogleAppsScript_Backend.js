@@ -500,7 +500,7 @@ function bouwGrafiekPlaats(data) {
       .setOption("legend", { position: "top", maxLines: 3, textStyle: { fontSize: 11 } })
       .setOption("width", diagramW)
       .setOption("height", diagramH)
-      .setPosition(rij, kolom, 20, 0)
+      .setPosition(rij + 1, kolom, 0, 0)
       .build();
     graf.insertChart(chart);
   }
