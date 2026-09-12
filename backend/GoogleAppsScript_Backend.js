@@ -64,7 +64,9 @@ function stuurMelding(data, soorten, plaatsOpGps) {
       "Opmerking: " + (data.opmerking ? data.opmerking : "-");
     MailApp.sendEmail(ontvanger, subject, body);
   } catch (e) {
-    // nooit laten mislukken: melding is extra, de registratie is al opgeslagen
+    // nooit laten mislukken: melding is extra, de registratie is al opgeslagen.
+    // Wél loggen zodat de oorzaak zichtbaar is (Uitvoeringen/Executions in Apps Script).
+    console.error("Mail naar " + (ontvanger || "?") + " mislukt: " + e.toString());
   }
 }
 
