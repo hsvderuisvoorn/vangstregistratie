@@ -56,29 +56,74 @@ var PLAATSEN = [
 ];
 
 /* ===== GEOREFERENTIE VAN DE VIJVERKAART (GPS-koppeling) =====
- * Zet hier de GPS-coördinaten van 2 hoekpunten van de vijverkaart neer.
- * Zo kun je de kaart over OpenStreetMap leggen en klopt elke GPS-locatie.
- *   sw = zuidwest (linksonder), ne = noordoost (rechtsboven)
- * Vind de coördinaten via Google Maps: klik met rechtermuisknop op een
- * herkenbaar punt van de kaart (bijv. hoekpunt van de vijver) en kies
- * "Wat is hier?" — kopieer de twee getallen.
- *
- * Voorbeeld:
- *   var KAART_BEREIK = { sw: { lat: 49.01, lon: 5.10 }, ne: { lat: 49.05, lon: 5.20 } };
+ * Vul hier minimaal 3 duidelijk verdeelde punten in:
+ * op de kaart (x, y in procenten) met hun echte GPS-coördinaten.
+ * Vind de GPS via Google Maps: rechtsklik > "Wat is hier?".
+ * De app rekent hiermee zelf de koppeling uit.
  */
+var KAART_PUNTEN = [
+  { x: 1.3,  y: 28.8, lat: 51.334588, lon: 6.031775 },   // plek 3
+  { x: 50.4, y: 26.9, lat: 51.334653, lon: 6.033626 }    // plek 21
+];
 var KAART_BEREIK = null;
+var kaartFit = null;
 var modeKaart = "afbeelding";
 
+function fitKaart(punten) {
+  var A = [], bx = [], by = [];
+  for (var i = 0; i < punten.length; i++) {
+    var p = punten[i];
+    A.push([1, p.lat, p.lon]);
+    bx.push(p.x);
+    by.push(p.y);
+  }
+  var omx = leastSquares(A, bx);
+  var omy = leastSquares(A, by);
+  if (!omx || !omy) return false;
+
+  var I = [], ilat = [], ilon = [];
+  for (var j = 0; j < punten.length; j++) {
+    var q = punten[j];
+    I.push([1, q.x, q.y]);
+    ilat.push(q.lat);
+    ilon.push(q.lon);
+  }
+  var alat = leastSquares(I, ilat);
+  var alon = leastSquares(I, ilon);
+  if (!alat || !alon) return false;
+
+  kaartFit = { x: omx, y: omy, lat: alat, lon: alon };
+  return true;
+}
+
 function latLngNaarProcent(lat, lng) {
+  if (kaartFit) {
+    return {
+      x: Math.max(0, Math.min(100, kaartFit.x[0] + kaartFit.x[1] * lat + kaartFit.x[2] * lng)),
+      y: Math.max(0, Math.min(100, kaartFit.y[0] + kaartFit.y[1] * lat + kaartFit.y[2] * lng))
+    };
+  }
+  if (!KAART_BEREIK) return null;
   var sw = KAART_BEREIK.sw, ne = KAART_BEREIK.ne;
-  var x = ((lng - sw.lon) / (ne.lon - sw.lon)) * 100;
-  var y = ((ne.lat - lat) / (ne.lat - sw.lat)) * 100;
-  return { x: x, y: y };
+  return {
+    x: ((lng - sw.lon) / (ne.lon - sw.lon)) * 100,
+    y: ((ne.lat - lat) / (ne.lat - sw.lat)) * 100
+  };
 }
 
 function procentNaarLatLng(x, y) {
+  if (kaartFit) {
+    return {
+      lat: kaartFit.lat[0] + kaartFit.lat[1] * x + kaartFit.lat[2] * y,
+      lng: kaartFit.lon[0] + kaartFit.lon[1] * x + kaartFit.lon[2] * y
+    };
+  }
+  if (!KAART_BEREIK) return null;
   var sw = KAART_BEREIK.sw, ne = KAART_BEREIK.ne;
-  return { lat: ne.lat - ((y / 100) * (ne.lat - sw.lat)), lng: sw.lon + ((x / 100) * (ne.lon - sw.lon)) };
+  return {
+    lat: ne.lat - ((y / 100) * (ne.lat - sw.lat)),
+    lng: sw.lon + ((x / 100) * (ne.lon - sw.lon))
+  };
 }
 
 function vindPlaats(x, y) {
@@ -154,29 +199,28 @@ var map = null;
 var leafletMarker = null;
 
 function initKaart() {
-  if (typeof window.L !== "undefined" && KAART_BEREIK) {
+  if (typeof window.L === "undefined") return;
+  if (KAART_PUNTEN && KAART_PUNTEN.length >= 3 && fitKaart(KAART_PUNTEN)) {
     modeKaart = "leaflet";
+    var c1 = procentNaarLatLng(0, 0);
+    var c2 = procentNaarLatLng(100, 100);
+    var sw = { lat: Math.min(c1.lat, c2.lat), lon: Math.min(c1.lon, c2.lon) };
+    var ne = { lat: Math.max(c1.lat, c2.lat), lon: Math.max(c1.lon, c2.lon) };
     els.kaartContainer.classList.add("leaflet-modus");
     map = L.map("kaart", { zoomControl: true });
-    map.setView([
-      (KAART_BEREIK.sw.lat + KAART_BEREIK.ne.lat) / 2,
-      (KAART_BEREIK.sw.lon + KAART_BEREIK.ne.lon) / 2
-    ], 17);
+    map.setView([(sw.lat + ne.lat) / 2, (sw.lon + ne.lon) / 2], 17);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap-bijdragers"
     }).addTo(map);
     L.imageOverlay(MAP_IMAGE, [
-      [KAART_BEREIK.sw.lat, KAART_BEREIK.sw.lon],
-      [KAART_BEREIK.ne.lat, KAART_BEREIK.ne.lon]
+      [sw.lat, sw.lon],
+      [ne.lat, ne.lon]
     ], { opacity: 0.8 }).addTo(map);
-    map.fitBounds([
-      [KAART_BEREIK.sw.lat, KAART_BEREIK.sw.lon],
-      [KAART_BEREIK.ne.lat, KAART_BEREIK.ne.lon]
-    ]);
+    map.fitBounds([[sw.lat, sw.lon], [ne.lat, ne.lon]]);
     map.on("click", function (ev) {
       var p = latLngNaarProcent(ev.latlng.lat, ev.latlng.lng);
-      verwerkKaartKlik(p.x, p.y);
+      if (p) verwerkKaartKlik(p.x, p.y);
     });
   }
 }
@@ -209,7 +253,7 @@ function verplaatsVanGps(gps) {
   var kaartPos = null;
   if (modeKaart === "leaflet") {
     kaartPos = latLngNaarProcent(gps.lat, gps.lon);
-    if (kaartPos.x < 0 || kaartPos.x > 100 || kaartPos.y < 0 || kaartPos.y > 100) kaartPos = null;
+    if (!kaartPos || kaartPos.x < 0 || kaartPos.x > 100 || kaartPos.y < 0 || kaartPos.y > 100) kaartPos = null;
   } else {
     kaartPos = gpsNaarKaart(gps);
   }
