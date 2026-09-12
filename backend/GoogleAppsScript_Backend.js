@@ -516,6 +516,12 @@ function onOpen() {
   ui.createMenu("Vangsten")
     .addItem("Grafieken verversen", "verversGrafieken")
     .addToUi();
+  // grafieken automatisch bijwerken bij het openen van de spreadsheet
+  try {
+    werkGrafiekenBij();
+  } catch (e) {
+    // stil negeren; kan mislukken als bij het openen nog geen edit-rechten zijn verleend
+  }
 }
 
 function json(obj) {
