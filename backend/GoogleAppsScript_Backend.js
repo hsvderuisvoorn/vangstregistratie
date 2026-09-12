@@ -40,15 +40,24 @@ function doGet() {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
-function stuurMelding(data, plaatsOpGps) {
+function stuurMelding(data, soorten, plaatsOpGps) {
   try {
     var ontvanger = "paul@hsvderuisvoorn.nl";
-    var subject = "Nieuwe vangst: " + (data.soort || "") + " x " + (data.aantal || "");
-    var body =
-      "Soort: " + (data.soort || "") + "\n" +
-      "Aantal: " + (data.aantal || "") + "\n" +
-      "Datum: " + (data.datum || "") + "\n" +
-      "Plaats (handmatig/kaart): " + (data.plaats ? data.plaats : "-") + "\n" +
+    var soortenRegels = [];
+    var totaal = 0;
+    for (var i = 0; i < soorten.length; i++) {
+      var s = soorten[i];
+      var naam = String(s.soort || "").trim();
+      var a = Number(s.aantal) || 0;
+      if (!naam || a <= 0) continue;
+      soortenRegels.push("- " + naam + " x " + a);
+      totaal += a;
+    }
+    if (soortenRegels.length === 0) return;
+    var subject = "Nieuwe vangstregistratie: " + soortenRegels.length + " soort(en), totaal " + totaal + " vis(sen)";
+    var body = "Datum: " + (data.datum || "-") + "\n\n" +
+      "Soorten:\n" + soortenRegels.join("\n") + "\n\n" +
+      "Plaats (handmatig/kaart): " + (data.plaats ? String(data.plaats) : "-") + "\n" +
       "Plaats (via GPS): " + (plaatsOpGps ? plaatsOpGps : "-") + "\n" +
       "GPS: " + (data.gps_lat ? (data.gps_lat + ", " + data.gps_lon) : "-") + "\n" +
       "Visser: " + (data.visser ? data.visser : "-") + "\n" +
@@ -72,9 +81,17 @@ function doPost(e) {
       sheet = ss.insertSheet("Vangsten");
     }
 
-    var soort = (data.soort || "").trim();
-    if (!soort || !data.datum || !data.aantal) {
-      return json({ status: "fout", melding: "Vul minimaal datum, soort en aantal in." });
+    // nieuw formaat: { datum, visser, opmerking, plaats, gps..., soorten: [{soort, aantal}] }
+    // oud formaat (per rij): { ... soort, aantal }
+    var soorten = [];
+    if (data.soorten && data.soorten.length) {
+      soorten = data.soorten;
+    } else if (data.soort) {
+      soorten = [{ soort: data.soort, aantal: data.aantal }];
+    }
+
+    if (!data.datum || soorten.length === 0) {
+      return json({ status: "fout", melding: "Vul minimaal datum en een vissoort met aantal in." });
     }
 
     // Plaatsnummer afleiden uit GPS-coördinaten (indien aanwezig)
@@ -83,9 +100,27 @@ function doPost(e) {
       plaatsOpGps = gpsNaarPlaats(Number(data.gps_lat), Number(data.gps_lon));
     }
 
-    voegRijToe(sheet, data, plaatsOpGps);
+    for (var i = 0; i < soorten.length; i++) {
+      var s = soorten[i];
+      var soort = String(s.soort || "").trim();
+      var aantal = Number(s.aantal);
+      if (!soort || !aantal) continue;
+      voegRijToe(sheet, {
+        datum: data.datum,
+        soort: soort,
+        aantal: aantal,
+        gps_lat: data.gps_lat,
+        gps_lon: data.gps_lon,
+        kaart_x: data.kaart_x,
+        kaart_y: data.kaart_y,
+        plaats: data.plaats,
+        visser: data.visser,
+        opmerking: data.opmerking
+      }, plaatsOpGps);
+    }
+
     werkGrafiekenBij();
-    stuurMelding(data, plaatsOpGps);
+    stuurMelding(data, soorten, plaatsOpGps);
 
     return json({ status: "ok" });
   } catch (err) {

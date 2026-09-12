@@ -527,9 +527,9 @@ els.verstuurBtn.addEventListener("click", function () {
   entries.forEach(function (entry) {
     state.entries.push(entry);
     saveEntries();
-    verstuur(entry);
   });
   toonLijst();
+  verstuurEntries(entries);
   resetForm();
 });
 
@@ -556,9 +556,11 @@ var handmatig = els.plaatsHandmatig ? els.plaatsHandmatig.value.trim() : "";
     if (gevonden) plaats = gevonden.nr;
   }
 
-  return regels.map(function (r) {
+  var sessieId = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+  return regels.map(function (r, i) {
     return {
-      id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+      id: sessieId + "-" + i,
+      sessieId: sessieId,
       datum: datum,
       soort: r.soort,
       aantal: r.aantal,
@@ -620,38 +622,51 @@ function backendUrl() {
   return BACKEND_URL ? BACKEND_URL.replace(/\/+$/, "") : "";
 }
 
-function verstuur(entry) {
+function groepeerOpSessie(entries) {
+  var groepen = [];
+  var index = {};
+  entries.forEach(function (e) {
+    var sleutel = e.sessieId || e.id || "los";
+    if (!index[sleutel]) { index[sleutel] = []; groepen.push(index[sleutel]); }
+    index[sleutel].push(e);
+  });
+  return groepen;
+}
+
+function verstuurEntries(entries) {
+  if (entries.length === 0) return;
   var url = backendUrl();
   if (!url) {
-    markeerEntry(entry, "lokaal");
+    entries.forEach(function (e) { markeerEntry(e, "lokaal"); });
     return;
   }
-  markeerEntry(entry, "versturen");
+  entries.forEach(function (e) { markeerEntry(e, "versturen"); });
+  var eerste = entries[0];
+  var sessie = {
+    datum: eerste.datum,
+    gps_lat: eerste.gps_lat,
+    gps_lon: eerste.gps_lon,
+    kaart_x: eerste.kaart_x,
+    kaart_y: eerste.kaart_y,
+    plaats: eerste.plaats || "",
+    visser: eerste.visser,
+    opmerking: eerste.opmerking,
+    soorten: entries.map(function (e) { return { soort: e.soort, aantal: e.aantal }; })
+  };
   fetch(url, {
     method: "POST",
     mode: "cors",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({
-      datum: entry.datum,
-      soort: entry.soort,
-      aantal: entry.aantal,
-      gps_lat: entry.gps_lat,
-      gps_lon: entry.gps_lon,
-      kaart_x: entry.kaart_x,
-      kaart_y: entry.kaart_y,
-      plaats: entry.plaats || "",
-      visser: entry.visser,
-      opmerking: entry.opmerking
-    })
+    body: JSON.stringify(sessie)
   }).then(function (res) {
     if (!res.ok) throw new Error("HTTP " + res.status);
-    entry.synced = true;
-    saveEntries();
-    markeerEntry(entry, "gesynct");
-    if (state.entries.indexOf(entry) === state.entries.length - 1) okMelding("Vangst geregistreerd en verstuurd.");
+    entries.forEach(function (e) { e.synced = true; saveEntries(); markeerEntry(e, "gesynct"); });
+    var laatste = entries[entries.length - 1];
+    if (state.entries.indexOf(laatste) === state.entries.length - 1) okMelding("Vangst geregistreerd en verstuurd.");
   }).catch(function () {
-    markeerEntry(entry, "lokaal");
-    if (state.entries.indexOf(entry) === state.entries.length - 1) {
+    entries.forEach(function (e) { markeerEntry(e, "lokaal"); });
+    var laatste = entries[entries.length - 1];
+    if (state.entries.indexOf(laatste) === state.entries.length - 1) {
       okMelding("Vangst lokaal opgeslagen. Wordt opnieuw verstuurd zodra de server bereikbaar is.");
     }
   });
@@ -743,8 +758,8 @@ function automatischeSync() {
   var teDoen = state.entries.filter(function (e) { return !e.synced; });
   if (teDoen.length === 0) return;
   var melding = "Bezig met automatisch versturen van " + teDoen.length + " registratie(s)...";
-  if (state.entries.length > 0) els.syncStatus.textContent = melding;
-  teDoen.forEach(function (e) { verstuur(e); });
+if (state.entries.length > 0) els.syncStatus.textContent = melding;
+  groepeerOpSessie(teDoen).forEach(verstuurEntries);
   setTimeout(function () {
     var rest = state.entries.filter(function (x) { return !x.synced; }).length;
     if (rest === 0 && teDoen.length > 0 && state.entries.length > 0) {
@@ -759,8 +774,8 @@ els.syncBtn.addEventListener("click", function () {
   if (!backendUrl()) { els.syncStatus.textContent = "De vereniging heeft nog geen centrale opslag ingesteld. Registraties blijven op dit toestel. Gebruik Exporteren om de gegevens door te sturen."; return; }
   var teDoen = state.entries.filter(function (e) { return !e.synced; });
   if (teDoen.length === 0) { els.syncStatus.textContent = "Alles is al gesynchroniseerd."; return; }
-  els.syncStatus.textContent = "Opnieuw versturen van " + teDoen.length + " registratie(s)...";
-  teDoen.forEach(function (e) { verstuur(e); });
+els.syncStatus.textContent = "Opnieuw versturen van " + teDoen.length + " registratie(s)...";
+  groepeerOpSessie(teDoen).forEach(verstuurEntries);
   setTimeout(function () {
     var rest = state.entries.filter(function (x) { return !x.synced; }).length;
     els.syncStatus.textContent = rest === 0 ? "Klaar: alles is gesynchroniseerd." : (rest + " registratie(s) nog altijd alleen lokaal opgeslagen.");
