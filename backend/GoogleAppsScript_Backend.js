@@ -27,8 +27,10 @@
  *     app.js bij var BACKEND_URL.
  *
  *  De spreadsheet krijgt automatisch een tabblad "Vangsten" met
- *  een kolom per veld, inclusief de kolom "Plaats" (het nummer
- *  van het visvak op de plattegrond).
+ *  een kolom per veld. Naast "GPS_latitude/longitude" wordt ook
+ *  "Plaats_op_gps" gevuld: het plaatsnummer dat automatisch wordt
+ *  afgeleid uit de GPS-coördinaten (via de kalibratiepunten en de
+ *  plaatsenlijst hieronder).
  * ============================================================
  */
 
@@ -51,46 +53,18 @@ function doPost(e) {
       sheet = ss.insertSheet("Vangsten");
     }
 
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        "Datum", "Maand", "Soort", "Aantal", "GPS_latitude", "GPS_longitude",
-        "Kaart_X_%", "Kaart_Y_%", "Visser", "Opmerking", "Plaats", "Ingestuurd_op"
-      ]);
-      sheet.setFrozenRows(1);
-    }
-
-    // Zet de "Plaats"-kolom op de juiste plek als die nog ontbreekt
-    var koppen = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    var poi = koppen.indexOf("Ingestuurd_op");
-    if (poi > 0 && koppen[poi - 1] !== "Plaats") {
-      sheet.insertColumnBefore(poi + 1);
-      sheet.getRange(1, poi + 1).setValue("Plaats");
-    }
-
     var soort = (data.soort || "").trim();
     if (!soort || !data.datum || !data.aantal) {
       return json({ status: "fout", melding: "Vul minimaal datum, soort en aantal in." });
     }
 
-    var maand = "";
-    if (data.datum && data.datum.length >= 7) {
-      maand = data.datum.substring(0, 7);
+    // Plaatsnummer afleiden uit GPS-coördinaten (indien aanwezig)
+    var plaatsOpGps = "";
+    if (data.gps_lat && data.gps_lon) {
+      plaatsOpGps = gpsNaarPlaats(Number(data.gps_lat), Number(data.gps_lon));
     }
 
-    sheet.appendRow([
-      data.datum,
-      maand,
-      soort,
-      Number(data.aantal) || 0,
-      data.gps_lat || "",
-      data.gps_lon || "",
-      data.kaart_x || "",
-      data.kaart_y || "",
-      data.visser || "",
-      data.opmerking || "",
-      data.plaats || "",
-      new Date()
-    ]);
+    voegRijToe(sheet, data, plaatsOpGps);
 
     return json({ status: "ok" });
   } catch (err) {
@@ -98,6 +72,194 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/* ============================================================
+ *  KALIBRATIEPUNTEN EN PLAATSENLIJST
+ *  Zelfde waarden als in app.js. Aanpassen = beide bijwerken.
+ * ============================================================ */
+
+var KALIBRATIE = [
+  { lat: 51.334588, lon: 6.031775, x: 1.3, y: 28.8 },   // plek 3
+  { lat: 51.334653, lon: 6.033626, x: 50.4, y: 26.9 },  // plek 21
+  { lat: 51.334187, lon: 6.032008, x: 8.1, y: 52.8 },   // plek 1
+  { lat: 51.333471, lon: 6.034874, x: 83.8, y: 90.2 }   // ~plek 35
+];
+
+var PLAATSEN = [
+  { nr: 1, x: 8.1, y: 52.8 },   { nr: 2, x: 2.6, y: 35.1 },
+  { nr: 3, x: 1.3, y: 28.8 },   { nr: 1, x: 8.1, y: 52.5 },
+  { nr: 1, x: 7.6, y: 52.8 },   { nr: 1, x: 8.4, y: 51.8 },
+  { nr: 2, x: 3.7, y: 34.4 },   { nr: 3, x: 2.8, y: 28.8 },
+  { nr: 4, x: 9.5, y: 12.2 },   { nr: 5, x: 13.2, y: 11.9 },
+  { nr: 6, x: 18, y: 12.2 },    { nr: 7, x: 21.3, y: 14.3 },
+  { nr: 8, x: 23.7, y: 18.9 },  { nr: 9, x: 24.9, y: 23.8 },
+  { nr: 10, x: 25.2, y: 29.8 }, { nr: 11, x: 24.9, y: 36.1 },
+  { nr: 12, x: 24.5, y: 42.8 }, { nr: 13, x: 25.7, y: 48.9 },
+  { nr: 14, x: 28.3, y: 55.2 }, { nr: 15, x: 35.2, y: 54.4 },
+  { nr: 16, x: 37.9, y: 49.4 }, { nr: 16, x: 37.6, y: 50.3 },
+  { nr: 17, x: 39.3, y: 45.7 }, { nr: 18, x: 40.3, y: 37.5 },
+  { nr: 19, x: 40.6, y: 31.5 }, { nr: 20, x: 41.3, y: 27.1 },
+  { nr: 21, x: 50.4, y: 26.9 }, { nr: 22, x: 52.6, y: 29.8 },
+  { nr: 23, x: 55.7, y: 30.8 }, { nr: 24, x: 58.4, y: 33.7 },
+  { nr: 25, x: 63.1, y: 35.1 }, { nr: 26, x: 66, y: 36.3 },
+  { nr: 27, x: 69.7, y: 38.3 }, { nr: 28, x: 73, y: 42.4 },
+  { nr: 29, x: 75.9, y: 46.2 }, { nr: 30, x: 78, y: 51.1 },
+  { nr: 31, x: 81.4, y: 54.4 }, { nr: 32, x: 83.8, y: 59.3 },
+  { nr: 33, x: 86.7, y: 63.4 }, { nr: 34, x: 89.3, y: 67.7 },
+  { nr: 35, x: 83.8, y: 90.2 }, { nr: 35, x: 85.2, y: 92.1 },
+  { nr: 36, x: 79, y: 87.5 },   { nr: 36, x: 80, y: 89 },
+  { nr: 36, x: 80.5, y: 89 },   { nr: 37, x: 75.4, y: 85.8 },
+  { nr: 38, x: 71.1, y: 82.9 }, { nr: 39, x: 66.7, y: 79.3 },
+  { nr: 39, x: 67, y: 82 },     { nr: 40, x: 61.9, y: 78.6 },
+  { nr: 41, x: 59.3, y: 73.5 }, { nr: 42, x: 57.1, y: 68.5 },
+  { nr: 42, x: 57.8, y: 69.4 }, { nr: 43, x: 54.3, y: 65.6 },
+  { nr: 44, x: 50.6, y: 61.9 }, { nr: 44, x: 51.6, y: 63.1 },
+  { nr: 45, x: 48.9, y: 60.2 }, { nr: 46, x: 43, y: 63.9 },
+  { nr: 46, x: 43.9, y: 62.9 }, { nr: 47, x: 40.3, y: 68.2 },
+  { nr: 47, x: 40.6, y: 67.5 }, { nr: 48, x: 37.6, y: 71.1 },
+  { nr: 49, x: 32.8, y: 72.8 }, { nr: 49, x: 34.1, y: 70.6 },
+  { nr: 50, x: 28.8, y: 70.4 }, { nr: 50, x: 29.7, y: 71.4 },
+  { nr: 51, x: 24.2, y: 71.6 }, { nr: 52, x: 19.7, y: 68 },
+  { nr: 52, x: 20.3, y: 68.7 }, { nr: 53, x: 16.7, y: 65.6 },
+  { nr: 54, x: 13.2, y: 62.2 }, { nr: 55, x: 11.4, y: 57.3 }
+];
+
+/* Afstandsdrempel (in % van de kaart) voor koppelen aan een plaats */
+var PLAATS_DREMPEL = 4;
+
+/* ============================================================
+ *  GPS -> plaatsnummer
+ * ============================================================ */
+
+function gpsNaarPlaats(lat, lon) {
+  var pos = gpsNaarKaart(lat, lon);
+  if (!pos) return "";
+  var dichtste = "";
+  var beste = PLAATS_DREMPEL;
+  for (var i = 0; i < PLAATSEN.length; i++) {
+    var p = PLAATSEN[i];
+    var afstand = Math.sqrt((p.x - pos.x) * (p.x - pos.x) + (p.y - pos.y) * (p.y - pos.y));
+    if (afstand < beste) { beste = afstand; dichtste = p.nr; }
+  }
+  return dichtste;
+}
+
+function gpsNaarKaart(lat, lon) {
+  if (KALIBRATIE.length < 3) return null;
+  var A = [], bx = [], by = [];
+  for (var i = 0; i < KALIBRATIE.length; i++) {
+    var p = KALIBRATIE[i];
+    A.push([1, p.lat, p.lon]);
+    bx.push(p.x);
+    by.push(p.y);
+  }
+  var solx = leastSquares(A, bx);
+  var soly = leastSquares(A, by);
+  if (!solx || !soly) return null;
+  var x = solx[0] + solx[1] * lat + solx[2] * lon;
+  var y = soly[0] + soly[1] * lat + soly[2] * lon;
+  x = Math.max(0, Math.min(100, x));
+  y = Math.max(0, Math.min(100, y));
+  return { x: x, y: y };
+}
+
+function leastSquares(M, b) {
+  var n = M.length, d = M[0].length;
+  var ATA = [], ATb = [];
+  for (var i = 0; i < d; i++) {
+    ATA.push(new Array(d).fill(0));
+    ATb.push(0);
+  }
+  for (var i = 0; i < n; i++) {
+    for (var r = 0; r < d; r++) {
+      ATb[r] += M[i][r] * b[i];
+      for (var c = 0; c < d; c++) ATA[r][c] += M[i][r] * M[i][c];
+    }
+  }
+  try { return gauss(ATA, ATb); } catch (e) { return null; }
+}
+
+function gauss(A, b) {
+  var n = A.length;
+  for (var i = 0; i < n; i++) {
+    var max = i;
+    for (var r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[max][i])) max = r;
+    if (Math.abs(A[max][i]) < 1e-12) throw new Error("singulier");
+    var tmp = A[i]; A[i] = A[max]; A[max] = tmp;
+    var tb = b[i]; b[i] = b[max]; b[max] = tb;
+    var div = A[i][i];
+    for (var c = 0; c < n; c++) A[i][c] /= div;
+    b[i] /= div;
+    for (var r = 0; r < n; r++) {
+      if (r === i) continue;
+      var f = A[r][i];
+      for (var c = 0; c < n; c++) A[r][c] -= f * A[i][c];
+      b[r] -= f * b[i];
+    }
+  }
+  return b;
+}
+
+/* ============================================================
+ *  Spreadsheet: kolommen verzekeren + rij toevoegen
+ * ============================================================ */
+
+var VERWACHTE_KOPPEN = [
+  "Datum", "Maand", "Soort", "Aantal",
+  "GPS_latitude", "GPS_longitude",
+  "Kaart_X_%", "Kaart_Y_%",
+  "Visser", "Opmerking",
+  "Plaats", "Plaats_op_gps", "Ingestuurd_op"
+];
+
+function verzekerKoppen(sheet) {
+  var cols = sheet.getLastColumn();
+  var koppen = cols > 0 ? sheet.getRange(1, 1, 1, cols).getValues()[0] : [];
+  if (typeof koppen[0] === "string" && koppen[0].indexOf("Datum") !== -1) {
+    // bestaande header: ontbrekende kolommen invoegen vóór "Ingestuurd_op"
+    var poi = koppen.indexOf("Ingestuurd_op");
+    for (var i = 0; i < VERWACHTE_KOPPEN.length; i++) {
+      if (koppen.indexOf(VERWACHTE_KOPPEN[i]) === -1) {
+        var insertAt = poi > 0 ? poi + 1 : koppen.length + 1;
+        sheet.insertColumnBefore(insertAt);
+        sheet.getRange(1, insertAt).setValue(VERWACHTE_KOPPEN[i]);
+        koppen.splice(insertAt - 1, 0, VERWACHTE_KOPPEN[i]);
+        if (poi >= insertAt - 1) poi++;
+      }
+    }
+    return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  }
+  // lege sheet: volledige kopregel maken
+  sheet.getRange(1, 1, 1, VERWACHTE_KOPPEN.length).setValues([VERWACHTE_KOPPEN]);
+  sheet.setFrozenRows(1);
+  return VERWACHTE_KOPPEN.slice();
+}
+
+function voegRijToe(sheet, data, plaatsOpGps) {
+  var koppen = verzekerKoppen(sheet);
+  var rij = [];
+  for (var i = 0; i < koppen.length; i++) {
+    rij.push(waardeVoorKol(koppen[i], data, plaatsOpGps));
+  }
+  sheet.appendRow(rij);
+}
+
+function waardeVoorKol(kop, data, plaatsOpGps) {
+  if (kop === "Datum") return data.datum || "";
+  if (kop === "Maand") return (data.datum && data.datum.length >= 7) ? data.datum.substring(0, 7) : "";
+  if (kop === "Soort") return (data.soort || "").trim();
+  if (kop === "Aantal") return Number(data.aantal) || 0;
+  if (kop === "GPS_latitude") return data.gps_lat || "";
+  if (kop === "GPS_longitude") return data.gps_lon || "";
+  if (kop === "Kaart_X_%") return data.kaart_x || "";
+  if (kop === "Kaart_Y_%") return data.kaart_y || "";
+  if (kop === "Visser") return data.visser || "";
+  if (kop === "Opmerking") return data.opmerking || "";
+  if (kop === "Plaats") return data.plaats || "";
+  if (kop === "Plaats_op_gps") return plaatsOpGps || "";
+  if (kop === "Ingestuurd_op") return new Date();
+  return "";
 }
 
 function json(obj) {
