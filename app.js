@@ -4,6 +4,14 @@ var SETTINGS_KEY = "vangst_settings";
 var ENTRIES_KEY = "vangst_entries";
 var MAP_IMAGE = "vijverkaart.jpg";
 
+/* ===== BACKEND-URL VAN DE VERENIGING =====
+ * Plak hier de web-app-URL uit de Google Apps Script-handleiding
+ * (eindigt op /exec). Ledigs gelaten = alleen lokaal opslaan.
+ * Zet de URL tussen de aanhalingstekens, bijv.:
+ *   var BACKEND_URL = "https://script.google.com/macros/s/AKfyc.../exec";
+ */
+var BACKEND_URL = "";
+
 var state = {
   settings: loadSettings(),
   entries: loadEntries(),
@@ -48,9 +56,7 @@ var els = {
   registratieLijst: document.getElementById("registratieLijst"),
   exportBtn: document.getElementById("exportBtn"),
   syncBtn: document.getElementById("syncBtn"),
-  syncStatus: document.getElementById("syncStatus"),
-  backendUrl: document.getElementById("backendUrl"),
-  opslaanSettingsBtn: document.getElementById("opslaanSettingsBtn")
+  syncStatus: document.getElementById("syncStatus")
 };
 
 function initDatum() {
@@ -278,8 +284,7 @@ function okMelding(tekst) {
 /* -------- Verzenden naar Google Sheet-backend -------- */
 
 function backendUrl() {
-  var url = (state.settings.backendUrl || "").trim();
-  return url ? url.replace(/\/+$/, "") : "";
+  return BACKEND_URL ? BACKEND_URL.replace(/\/+$/, "") : "";
 }
 
 function verstuur(entry) {
@@ -399,7 +404,7 @@ els.exportBtn.addEventListener("click", function () {
 });
 
 els.syncBtn.addEventListener("click", function () {
-  if (!backendUrl()) { els.syncStatus.textContent = "Geen backend-URL ingesteld. Vul die in bij Instellingen, of exporteer het bestand."; return; }
+  if (!backendUrl()) { els.syncStatus.textContent = "De vereniging heeft nog geen centrale opslag ingesteld. Registraties blijven op dit toestel. Gebruik Exporteren om de gegevens door te sturen."; return; }
   var teDoen = state.entries.filter(function (e) { return !e.synced; });
   if (teDoen.length === 0) { els.syncStatus.textContent = "Alles is al gesynchroniseerd."; return; }
   els.syncStatus.textContent = "Opnieuw versturen van " + teDoen.length + " registratie(s)...";
@@ -428,16 +433,6 @@ els.kaartContainer.addEventListener("touchend", function (e) {
   var rect = els.kaartContainer.getBoundingClientRect();
   plaatsMarker(((touch.clientX - rect.left) / rect.width) * 100, ((touch.clientY - rect.top) / rect.height) * 100);
   if (state.kalibratieModus) vraagKalibratiePunt(state.markerPos.x, state.markerPos.y);
-});
-
-/* -------- Instellingen -------- */
-
-els.backendUrl.value = (state.settings.backendUrl || "");
-els.opslaanSettingsBtn.addEventListener("click", function () {
-  state.settings.backendUrl = els.backendUrl.value.trim();
-  saveSettings();
-  okMelding("Instellingen opgeslagen.");
-  setTimeout(function () { els.uploadStatus.classList.add("hidden"); }, 2500);
 });
 
 /* -------- Start -------- */
