@@ -13,18 +13,47 @@ var MAP_IMAGE = "vijverkaart.jpg";
 var BACKEND_URL = "https://script.google.com/macros/s/AKfycby6SUqGCFHrZ0Nl6O4TMwcL8wFfsyiojPC3rqQGKvMDBgNFlbiw3LNmMIpbd1Qt39M/exec";
 
 /* ===== PLAATSEN OP DE VIJVERKAART =====
- * Vul hier de genummerde vakken van de kaart in, bijv.:
- *   var PLAATSEN = [
- *     { nr: 1,  x: 22.5, y: 41.0 },
- *     { nr: 2,  x: 48.0, y: 30.5 }
- *   ];
- * x/y zijn de percentages (0-100) op de afbeelding.
- * Makkelijk invullen: open de app, typ in de console (F12):
- *   plaatsenHulp()
- * Klik dan elk genummerd vak aan en geef het nummer in.
- * De lijst verschijnt automatisch om te kopiëren.
+ * Genummerde visvakken zoals op de plattegrond.
  */
-var PLAATSEN = [];
+
+var PLAATSEN = [
+  { nr: 1, x: 8.1, y: 52.8 },   { nr: 2, x: 2.6, y: 35.1 },
+  { nr: 3, x: 1.3, y: 28.8 },   { nr: 1, x: 8.1, y: 52.5 },
+  { nr: 1, x: 7.6, y: 52.8 },   { nr: 1, x: 8.4, y: 51.8 },
+  { nr: 2, x: 3.7, y: 34.4 },   { nr: 3, x: 2.8, y: 28.8 },
+  { nr: 4, x: 9.5, y: 12.2 },   { nr: 5, x: 13.2, y: 11.9 },
+  { nr: 6, x: 18, y: 12.2 },    { nr: 7, x: 21.3, y: 14.3 },
+  { nr: 8, x: 23.7, y: 18.9 },  { nr: 9, x: 24.9, y: 23.8 },
+  { nr: 10, x: 25.2, y: 29.8 }, { nr: 11, x: 24.9, y: 36.1 },
+  { nr: 12, x: 24.5, y: 42.8 }, { nr: 13, x: 25.7, y: 48.9 },
+  { nr: 14, x: 28.3, y: 55.2 }, { nr: 15, x: 35.2, y: 54.4 },
+  { nr: 16, x: 37.9, y: 49.4 }, { nr: 16, x: 37.6, y: 50.3 },
+  { nr: 17, x: 39.3, y: 45.7 }, { nr: 18, x: 40.3, y: 37.5 },
+  { nr: 19, x: 40.6, y: 31.5 }, { nr: 20, x: 41.3, y: 27.1 },
+  { nr: 21, x: 50.4, y: 26.9 }, { nr: 22, x: 52.6, y: 29.8 },
+  { nr: 23, x: 55.7, y: 30.8 }, { nr: 24, x: 58.4, y: 33.7 },
+  { nr: 25, x: 63.1, y: 35.1 }, { nr: 26, x: 66, y: 36.3 },
+  { nr: 27, x: 69.7, y: 38.3 }, { nr: 28, x: 73, y: 42.4 },
+  { nr: 29, x: 75.9, y: 46.2 }, { nr: 30, x: 78, y: 51.1 },
+  { nr: 31, x: 81.4, y: 54.4 }, { nr: 32, x: 83.8, y: 59.3 },
+  { nr: 33, x: 86.7, y: 63.4 }, { nr: 34, x: 89.3, y: 67.7 },
+  { nr: 35, x: 83.8, y: 90.2 }, { nr: 35, x: 85.2, y: 92.1 },
+  { nr: 36, x: 79, y: 87.5 },   { nr: 36, x: 80, y: 89 },
+  { nr: 36, x: 80.5, y: 89 },   { nr: 37, x: 75.4, y: 85.8 },
+  { nr: 38, x: 71.1, y: 82.9 }, { nr: 39, x: 66.7, y: 79.3 },
+  { nr: 39, x: 67, y: 82 },     { nr: 40, x: 61.9, y: 78.6 },
+  { nr: 41, x: 59.3, y: 73.5 }, { nr: 42, x: 57.1, y: 68.5 },
+  { nr: 42, x: 57.8, y: 69.4 }, { nr: 43, x: 54.3, y: 65.6 },
+  { nr: 44, x: 50.6, y: 61.9 }, { nr: 44, x: 51.6, y: 63.1 },
+  { nr: 45, x: 48.9, y: 60.2 }, { nr: 46, x: 43, y: 63.9 },
+  { nr: 46, x: 43.9, y: 62.9 }, { nr: 47, x: 40.3, y: 68.2 },
+  { nr: 47, x: 40.6, y: 67.5 }, { nr: 48, x: 37.6, y: 71.1 },
+  { nr: 49, x: 32.8, y: 72.8 }, { nr: 49, x: 34.1, y: 70.6 },
+  { nr: 50, x: 28.8, y: 70.4 }, { nr: 50, x: 29.7, y: 71.4 },
+  { nr: 51, x: 24.2, y: 71.6 }, { nr: 52, x: 19.7, y: 68 },
+  { nr: 52, x: 20.3, y: 68.7 }, { nr: 53, x: 16.7, y: 65.6 },
+  { nr: 54, x: 13.2, y: 62.2 }, { nr: 55, x: 11.4, y: 57.3 }
+];
 
 function vindPlaats(x, y) {
   var dichtste = null, beste = 4;
