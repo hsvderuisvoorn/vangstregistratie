@@ -12,12 +12,37 @@ var MAP_IMAGE = "vijverkaart.jpg";
  */
 var BACKEND_URL = "https://script.google.com/macros/s/AKfycby6SUqGCFHrZ0Nl6O4TMwcL8wFfsyiojPC3rqQGKvMDBgNFlbiw3LNmMIpbd1Qt39M/exec";
 
+/* ===== PLAATSEN OP DE VIJVERKAART =====
+ * Vul hier de genummerde vakken van de kaart in, bijv.:
+ *   var PLAATSEN = [
+ *     { nr: 1,  x: 22.5, y: 41.0 },
+ *     { nr: 2,  x: 48.0, y: 30.5 }
+ *   ];
+ * x/y zijn de percentages (0-100) op de afbeelding.
+ * Makkelijk invullen: open de app, typ in de console (F12):
+ *   plaatsenHulp()
+ * Klik dan elk genummerd vak aan en geef het nummer in.
+ * De lijst verschijnt automatisch om te kopiëren.
+ */
+var PLAATSEN = [];
+
+function vindPlaats(x, y) {
+  var dichtste = null, beste = 4;
+  for (var i = 0; i < PLAATSEN.length; i++) {
+    var p = PLAATSEN[i];
+    var afstand = Math.sqrt((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y));
+    if (afstand < beste) { beste = afstand; dichtste = p; }
+  }
+  return dichtste;
+}
+
 var state = {
   settings: loadSettings(),
   entries: loadEntries(),
   markerPos: null,
   gps: null,
-  kalibratieModus: false
+  kalibratieModus: false,
+  plaatsModus: false
 };
 
 function loadSettings() {
@@ -74,7 +99,18 @@ function muisOpKaart(e) {
   var rect = els.kaartContainer.getBoundingClientRect();
   var x = ((e.clientX - rect.left) / rect.width) * 100;
   var y = ((e.clientY - rect.top) / rect.height) * 100;
+  verwerkKaartKlik(x, y);
+}
+
+function verwerkKaartKlik(x, y) {
   plaatsMarker(x, y);
+  if (state.plaatsModus) {
+    var nr = prompt("Plaatsnummer van dit vak?");
+    if (nr !== null && nr.trim() !== "") {
+      plaatsenCollectie.push({ nr: Number(nr), x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
+    }
+    return;
+  }
   if (state.kalibratieModus) {
     vraagKalibratiePunt(x, y);
   }
@@ -91,6 +127,8 @@ function plaatsMarker(x, y) {
 function updateLocatieInfo() {
   var delen = [];
   if (state.markerPos) {
+    var p = vindPlaats(state.markerPos.x, state.markerPos.y);
+    if (p) delen.push("Plaats " + p.nr);
     delen.push("Kaart: " + Math.round(state.markerPos.x) + "%, " + Math.round(state.markerPos.y) + "%");
   }
   if (state.gps) {
@@ -238,6 +276,12 @@ function bouwEntry() {
   if (!soort) { foutMelding("Kies een vissoort."); return null; }
   if (!aantal || aantal < 1) { foutMelding("Vul een geldig aantal in."); return null; }
 
+  var plaats = "";
+  if (state.markerPos) {
+    var gevonden = vindPlaats(state.markerPos.x, state.markerPos.y);
+    if (gevonden) plaats = gevonden.nr;
+  }
+
   var entry = {
     id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
     datum: datum,
@@ -247,6 +291,7 @@ function bouwEntry() {
     gps_lon: state.gps ? state.gps.lon : "",
     kaart_x: state.markerPos ? Math.round(state.markerPos.x * 10) / 10 : "",
     kaart_y: state.markerPos ? Math.round(state.markerPos.y * 10) / 10 : "",
+    plaats: plaats,
     visser: els.visser.value.trim(),
     opmerking: els.opmerking.value.trim(),
     synced: false
@@ -306,6 +351,7 @@ function verstuur(entry) {
       gps_lon: entry.gps_lon,
       kaart_x: entry.kaart_x,
       kaart_y: entry.kaart_y,
+      plaats: entry.plaats || "",
       visser: entry.visser,
       opmerking: entry.opmerking
     })
@@ -354,8 +400,10 @@ function toonLijst() {
     if (entry.gps_lat !== "" && entry.gps_lat !== null) {
       loc.push("GPS " + Number(entry.gps_lat).toFixed(5) + ", " + Number(entry.gps_lon).toFixed(5));
     }
+    var plaatsRegel = "";
+    if (entry.plaats !== "" && entry.plaats !== null && entry.plaats !== undefined) plaatsRegel = "Plaats " + entry.plaats;
     info.innerHTML = "<b>" + soortenIcon(entry.soort) + " " + esc(entry.soort) + " × " + entry.aantal + "</b><br>" +
-      "<span class='klein'>" + esc(datumNl(entry.datum)) + " • " + (loc.length ? esc(loc.join(" • ")) : "geen locatie") + "</span>";
+      "<span class='klein'>" + esc(datumNl(entry.datum)) + (plaatsRegel ? " • " + esc(plaatsRegel) : "") + (loc.length ? " • " + esc(loc.join(" • ")) : (loc.length === 0 && !plaatsRegel ? " • geen locatie" : "")) + "</span>";
     var verwijder = document.createElement("button");
     verwijder.className = "verwijder";
     verwijder.textContent = "✕";
@@ -431,11 +479,22 @@ els.kaartContainer.addEventListener("touchend", function (e) {
   var touch = e.changedTouches[0];
   if (!touch) return;
   var rect = els.kaartContainer.getBoundingClientRect();
-  plaatsMarker(((touch.clientX - rect.left) / rect.width) * 100, ((touch.clientY - rect.top) / rect.height) * 100);
-  if (state.kalibratieModus) vraagKalibratiePunt(state.markerPos.x, state.markerPos.y);
+  verwerkKaartKlik(((touch.clientX - rect.left) / rect.width) * 100, ((touch.clientY - rect.top) / rect.height) * 100);
 });
 
 /* -------- Start -------- */
+
+var plaatsenCollectie = [];
+window.plaatsenHulp = function () {
+  state.plaatsModus = !state.plaatsModus;
+  if (state.plaatsModus) {
+    alert("Plaatsen-modus AAN: klik nu op de kaart op elk genummerd vak en voer het nummer in. Roep daarna plaatsenHulp() nogmaals aan om de lijst te krijgen.");
+  } else {
+    console.log("=== PLAATSEN voor app.js (kopieer dit) ===");
+    console.log(JSON.stringify(plaatsenCollectie));
+    alert("Klaar! Kopieer de PLAATSEN-lijst uit de console (F12) en stuur hem aan de beheerder.");
+  }
+};
 
 initDatum();
 toonLijst();
