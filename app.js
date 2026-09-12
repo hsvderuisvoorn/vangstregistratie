@@ -10,7 +10,7 @@ var MAP_IMAGE = "vijverkaart.jpg";
  * Zet de URL tussen de aanhalingstekens, bijv.:
  *   var BACKEND_URL = "https://script.google.com/macros/s/AKfyc.../exec";
  */
-var BACKEND_URL = "";
+var BACKEND_URL = "https://script.google.com/macros/s/AKfycby6SUqGCFHrZ0Nl6O4TMwcL8wFfsyiojPC3rqQGKvMDBgNFlbiw3LNmMIpbd1Qt39M/exec";
 
 var state = {
   settings: loadSettings(),
