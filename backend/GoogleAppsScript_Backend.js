@@ -302,9 +302,14 @@ function kolomIndexen(data) {
 }
 
 function jaarVanRij(rij, k) {
-  var m = String(rij[k.maand] || "").match(/^(\d{4})/);
+  // Google Sheets slaat datums op als Date-object; wees dus op beide voorbereid
+  var maand = rij[k.maand];
+  if (maand instanceof Date) return String(maand.getFullYear());
+  var m = String(maand || "").match(/^\s*(\d{4})/);
   if (m) return m[1];
-  var d = String(rij[k.datum] || "").match(/^(\d{4})/);
+  var dag = rij[k.datum];
+  if (dag instanceof Date) return String(dag.getFullYear());
+  var d = String(dag || "").match(/^\s*(\d{4})/);
   if (d) return d[1];
   return "";
 }
