@@ -619,6 +619,23 @@ els.exportBtn.addEventListener("click", function () {
   URL.revokeObjectURL(a.href);
 });
 
+function automatischeSync() {
+  if (!backendUrl()) return;
+  var teDoen = state.entries.filter(function (e) { return !e.synced; });
+  if (teDoen.length === 0) return;
+  var melding = "Bezig met automatisch versturen van " + teDoen.length + " registratie(s)...";
+  if (state.entries.length > 0) els.syncStatus.textContent = melding;
+  teDoen.forEach(function (e) { verstuur(e); });
+  setTimeout(function () {
+    var rest = state.entries.filter(function (x) { return !x.synced; }).length;
+    if (rest === 0 && teDoen.length > 0 && state.entries.length > 0) {
+      els.syncStatus.textContent = "Klaar: alles is automatisch gesynchroniseerd.";
+    }
+  }, teDoen.length * 400 + 3000);
+}
+
+window.addEventListener("online", automatischeSync);
+
 els.syncBtn.addEventListener("click", function () {
   if (!backendUrl()) { els.syncStatus.textContent = "De vereniging heeft nog geen centrale opslag ingesteld. Registraties blijven op dit toestel. Gebruik Exporteren om de gegevens door te sturen."; return; }
   var teDoen = state.entries.filter(function (e) { return !e.synced; });
@@ -670,3 +687,4 @@ window.plaatsenHulp = function () {
 initKaart();
 initDatum();
 toonLijst();
+automatischeSync();
