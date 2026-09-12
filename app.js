@@ -521,7 +521,8 @@ window.plaatsenHulp = function () {
   } else {
     console.log("=== PLAATSEN voor app.js (kopieer dit) ===");
     console.log(JSON.stringify(plaatsenCollectie));
-    alert("Klaar! Kopieer de PLAATSEN-lijst uit de console (F12) en stuur hem aan de beheerder.");
+    plaatsenCollectie = [];
+    alert("Klaar! Kopieer de PLAATSEN-lijst uit de console (F12) en stuur hem aan de beheerder. De lijst is nu gewist.");
   }
 };
 
