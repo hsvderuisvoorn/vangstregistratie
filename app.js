@@ -158,7 +158,6 @@ function updateLocatieInfo() {
   if (state.markerPos) {
     var p = vindPlaats(state.markerPos.x, state.markerPos.y);
     if (p) delen.push("Plaats " + p.nr);
-    delen.push("Kaart: " + Math.round(state.markerPos.x) + "%, " + Math.round(state.markerPos.y) + "%");
   }
   if (state.gps) {
     delen.push("GPS: " + state.gps.lat.toFixed(5) + ", " + state.gps.lon.toFixed(5));
@@ -424,15 +423,14 @@ function toonLijst() {
     li.id = "entry-" + entry.id;
     var info = document.createElement("div");
     info.className = "info";
-    var loc = [];
-    if (entry.kaart_x !== "") loc.push("kaart " + entry.kaart_x + "%, " + entry.kaart_y + "%");
+    var regels = [];
+    if (entry.plaats !== "" && entry.plaats !== null && entry.plaats !== undefined) regels.push("Plaats " + entry.plaats);
     if (entry.gps_lat !== "" && entry.gps_lat !== null) {
-      loc.push("GPS " + Number(entry.gps_lat).toFixed(5) + ", " + Number(entry.gps_lon).toFixed(5));
+      regels.push("GPS " + Number(entry.gps_lat).toFixed(5) + ", " + Number(entry.gps_lon).toFixed(5));
     }
-    var plaatsRegel = "";
-    if (entry.plaats !== "" && entry.plaats !== null && entry.plaats !== undefined) plaatsRegel = "Plaats " + entry.plaats;
+    if (regels.length === 0) regels.push("geen locatie");
     info.innerHTML = "<b>" + soortenIcon(entry.soort) + " " + esc(entry.soort) + " × " + entry.aantal + "</b><br>" +
-      "<span class='klein'>" + esc(datumNl(entry.datum)) + (plaatsRegel ? " • " + esc(plaatsRegel) : "") + (loc.length ? " • " + esc(loc.join(" • ")) : (loc.length === 0 && !plaatsRegel ? " • geen locatie" : "")) + "</span>";
+      "<span class='klein'>" + esc(datumNl(entry.datum)) + " • " + esc(regels.join(" • ")) + "</span>";
     var verwijder = document.createElement("button");
     verwijder.className = "verwijder";
     verwijder.textContent = "✕";
