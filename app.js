@@ -146,6 +146,17 @@ function vindPlaats(x, y, drempel) {
   return dichtste;
 }
 
+function kaartPosUitPlaats(nr) {
+  for (var i = 0; i < PLAATSEN.length; i++) {
+    if (PLAATSEN[i].nr === nr) return { x: PLAATSEN[i].x, y: PLAATSEN[i].y };
+  }
+  return null;
+}
+
+function plaatsBestaat(nr) {
+  return kaartPosUitPlaats(nr) !== null;
+}
+
 var state = {
   settings: loadSettings(),
   entries: loadEntries(),
@@ -185,8 +196,9 @@ var els = {
   kaartHint: document.getElementById("kaartHint"),
   gpsStatus: document.getElementById("gpsStatus"),
   locatieInfo: document.getElementById("locatieInfo"),
-  gpsBtn: document.getElementById("gpsBtn"),
+gpsBtn: document.getElementById("gpsBtn"),
   gpsResetBtn: document.getElementById("gpsResetBtn"),
+  plaatsHandmatig: document.getElementById("plaatsHandmatig"),
   lijstSectie: document.getElementById("lijstSectie"),
   registratieLijst: document.getElementById("registratieLijst"),
   exportBtn: document.getElementById("exportBtn"),
@@ -267,8 +279,9 @@ function verplaatsVanGps(gps) {
   } else {
     kaartPos = gpsNaarKaart(gps);
   }
-  if (kaartPos) {
+if (kaartPos) {
     plaatsMarker(kaartPos.x, kaartPos.y);
+    if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
     toonGpsStatus("GPS-locatie vastgelegd én op de kaart gezet (nauwkeurigheid ±" + Math.round(gps.acc) + " m).", false);
   } else {
     toonGpsStatus("GPS-locatie vastgelegd (nauwkeurigheid ±" + Math.round(gps.acc) + " m), maar de locatie ligt buiten de kaart.", false);
@@ -287,6 +300,8 @@ function muisOpKaart(e) {
 
 function verwerkKaartKlik(x, y) {
   plaatsMarker(x, y);
+  if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
+  updateLocatieInfo();
   if (state.plaatsModus) {
     var nr = prompt("Plaatsnummer van dit vak?");
     if (nr !== null && nr.trim() !== "") {
@@ -301,7 +316,9 @@ function verwerkKaartKlik(x, y) {
 
 function updateLocatieInfo() {
   var delen = [];
-  if (state.markerPos) {
+  if (els.plaatsHandmatig && els.plaatsHandmatig.value.trim() !== "") {
+    delen.push("Plaats " + els.plaatsHandmatig.value.trim() + " (handmatig)");
+  } else if (state.markerPos) {
     var p = vindPlaats(state.markerPos.x, state.markerPos.y, DREMPEL_TIK);
     if (p) delen.push("Plaats " + p.nr);
   }
@@ -525,8 +542,16 @@ function bouwEntries() {
   if (!datum) { foutMelding("Kies een datum."); return null; }
   if (regels.length === 0) { foutMelding("Vul minstens een vissoort met aantal in."); return null; }
 
+var handmatig = els.plaatsHandmatig ? els.plaatsHandmatig.value.trim() : "";
   var plaats = "";
-  if (state.markerPos) {
+  if (handmatig !== "") {
+    var nrHand = Number(handmatig);
+    if (!plaatsBestaat(nrHand)) {
+      foutMelding("Plaatsnummer " + nrHand + " bestaat niet (kies een geldig nummer).");
+      return null;
+    }
+    plaats = nrHand;
+  } else if (state.markerPos) {
     var gevonden = vindPlaats(state.markerPos.x, state.markerPos.y, DREMPEL_TIK);
     if (gevonden) plaats = gevonden.nr;
   }
@@ -571,8 +596,9 @@ function resetForm() {
   state.gps = null;
   if (leafletMarker && map) { map.removeLayer(leafletMarker); leafletMarker = null; }
   els.marker.classList.add("hidden");
-  els.gpsStatus.classList.add("hidden");
+els.gpsStatus.classList.add("hidden");
   els.gpsStatus.textContent = "";
+  if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
   updateLocatieInfo();
 }
 
@@ -744,9 +770,23 @@ els.syncBtn.addEventListener("click", function () {
 /* -------- GPS & kaart events -------- */
 
 els.gpsBtn.addEventListener("click", haalGpsOp);
+els.plaatsHandmatig.addEventListener("input", function () {
+  var v = els.plaatsHandmatig.value.trim();
+  if (v === "") { updateLocatieInfo(); return; }
+  var nr = Number(v);
+  var punt = kaartPosUitPlaats(nr);
+  if (punt) {
+    toonGpsStatus("Plaats " + nr + " handmatig gekozen.", false);
+    plaatsMarker(punt.x, punt.y);
+  } else {
+    toonGpsStatus("Plaatsnummer " + v + " bestaat niet (kies een geldig nummer).", true);
+    updateLocatieInfo();
+  }
+});
 els.gpsResetBtn.addEventListener("click", function () {
   state.gps = null;
   state.markerPos = null;
+  if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
   if (leafletMarker && map) { map.removeLayer(leafletMarker); leafletMarker = null; }
   els.marker.classList.add("hidden");
   els.gpsStatus.classList.add("hidden");

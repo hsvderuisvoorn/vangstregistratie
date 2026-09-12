@@ -273,6 +273,38 @@ function waardeVoorKol(kop, data, plaatsOpGps) {
  *  Handmatig: menu Vangsten > Grafieken verversen.
  * ============================================================ */
 
+var KLEUR_PER_SOORT = {
+  "Voorn": "#F9A825",
+  "Brasem": "#1565C0",
+  "Spiegelkarper": "#2E7D32",
+  "Schubkarper": "#795548",
+  "Graskarper": "#7CB342",
+  "F1 (kruis-kroeskarper)": "#00897B",
+  "Bliek": "#90A4AE",
+  "Zeelt": "#9E9D24",
+  "Posje": "#BCAAA4",
+  "Grondel": "#5D4037",
+  "Zonnebaars": "#29B6F6",
+  "Snoek": "#C62828",
+  "Meerval": "#4E342E",
+  "Paling": "#33691E",
+  "Baars": "#FB8C00",
+  "Overig...": "#BDBDBD"
+};
+
+function kleurenVoor(soorten) {
+  return soorten.map(function (s) { return KLEUR_PER_SOORT[s] || "#BDBDBD"; });
+}
+
+function isDonker(hex) {
+  var c = String(hex || "#FFFFFF").replace("#", "");
+  if (c.length !== 6) return false;
+  var r = parseInt(c.substr(0, 2), 16);
+  var g = parseInt(c.substr(2, 2), 16);
+  var b = parseInt(c.substr(4, 2), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+}
+
 function werkGrafiekenBij() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var bron = ss.getSheetByName("Vangsten");
@@ -336,6 +368,7 @@ function bouwGrafiekJaar(data) {
   if (jaren.length === 0) return;
   var soorten = Object.keys(alleSoorten).sort();
 
+  // eerste rij als soortsnamen, zodat de legenda bovenin de vissoorten toont
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var blad = ss.getSheetByName("Grafiek - Jaar");
   if (!blad) blad = ss.insertSheet("Grafiek - Jaar");
@@ -349,12 +382,12 @@ function bouwGrafiekJaar(data) {
   var nRijen = 1 + jaren.length;
   var nKol = 1 + soorten.length;
   var inhoud = [["Jaar"].concat(soorten)];
-  for (var j = 0; j < jaren.length; j++) {
-    var rij = [jaren[j]];
-    for (var s = 0; s < soorten.length; s++) {
-      rij.push(perJaar[jaren[j]][soorten[s]] || 0);
+  for (var j2 = 0; j2 < jaren.length; j2++) {
+    var rij2 = [jaren[j2]];
+    for (var s2 = 0; s2 < soorten.length; s2++) {
+      rij2.push(perJaar[jaren[j2]][soorten[s2]] || 0);
     }
-    inhoud.push(rij);
+    inhoud.push(rij2);
   }
   blad.getRange(3, 1, nRijen, nKol).setValues(inhoud);
 
@@ -362,15 +395,31 @@ function bouwGrafiekJaar(data) {
   var chart = blad.newChart()
     .setChartType(Charts.ChartType.COLUMN)
     .addRange(bereik)
+    .setNumHeaders(1)
     .setOption("title", "Vangsten per jaar per vissoort")
     .setOption("hAxis.title", "Jaar")
     .setOption("vAxis.title", "Aantal")
-    .setOption("isStacked", true)
+    .setOption("isStacked", false)
+    .setOption("colors", kleurenVoor(soorten))
+    .setOption("legend", { position: "top", maxLines: 5, textStyle: { fontSize: 12, bold: true } })
     .setOption("width", 900)
-    .setOption("height", 420)
+    .setOption("height", 460)
     .setPosition(3, nKol + 3, 0, 0)
     .build();
   blad.insertChart(chart);
+
+  // kleurensleutel: elke vissoort op een cel met zijn eigen kleur
+  var legStart = 3 + nRijen + 2;
+  blad.getRange(legStart, 1).setValue("Kleuren per vissoort");
+  blad.getRange(legStart, 1).setFontWeight("bold");
+  for (var i2 = 0; i2 < soorten.length; i2++) {
+    var kleur = KLEUR_PER_SOORT[soorten[i2]] || "#BDBDBD";
+    blad.getRange(legStart + 1 + i2, 1).setValue(soorten[i2]);
+    var gekleurd = blad.getRange(legStart + 1 + i2, 1, 1, 2);
+    gekleurd.setBackground(kleur);
+    gekleurd.setFontColor(isDonker(kleur) ? "#FFFFFF" : "#000000");
+    gekleurd.setFontWeight("bold");
+  }
 
   blad.getRange(1, nKol + 3).setValue("BESTEMD VOOR DE ALV");
   blad.getRange(1, nKol + 3).setFontWeight("bold");
@@ -388,7 +437,8 @@ function bouwGrafiekPlaats(data) {
     var soort = String(data[r][k.soort] || "").trim();
     var aantal = Number(data[r][k.aantal]);
     if (!soort || !aantal) continue;
-    var plaats = data[r][k.plaatsGps] || data[r][k.plaats] || "";
+    // plaats: handmatig gekozen of via de kaart heeft voorrang, anders afgeleid uit GPS
+    var plaats = data[r][k.plaats] || data[r][k.plaatsGps] || "";
     if (plaats === "" || plaats === null) continue;
     var nr = String(plaats);
     if (!perPlaats[nr]) perPlaats[nr] = {};
@@ -404,7 +454,7 @@ function bouwGrafiekPlaats(data) {
 
   var plaatsNrs = Object.keys(perPlaats).sort(function (a, b) { return Number(a) - Number(b); });
 
-  graf.getRange(1, 1).setValue("Vangsten per plaats (op basis van Plaats_op_gps, anders Plaats)");
+  graf.getRange(1, 1).setValue("Vangsten per plaats (handmatig/kaart heeft voorrang, anders via GPS)");
   graf.getRange(1, 1).setFontWeight("bold");
   graf.getRange(1, 1).setNote("Automatisch bijgewerkt bij elke nieuwe registratie. Handmatig verversen: menu Vangsten > Grafieken verversen.");
   graf.getRange(1, 8).setValue("BESTEMD VOOR HET BESTUUR");
@@ -412,9 +462,10 @@ function bouwGrafiekPlaats(data) {
 
   // 3 diagrammen per rij om het compacter te houden
   var kolomBlok = 6;   // kolommen breed per diagram
-  var diagramW = 520;  // pixels breed
-  var diagramH = 260;  // pixels hoog
+  var diagramW = 560;  // pixels breed
+  var diagramH = 300;  // pixels hoog (ruimte voor de legenda)
   var startRij = 3;
+  var dataKolom = 20;  // plek (rechts, uit het zicht) voor de data per diagram
 
   for (var i = 0; i < plaatsNrs.length; i++) {
     var nr2 = plaatsNrs[i];
@@ -428,25 +479,27 @@ function bouwGrafiekPlaats(data) {
     titel.setValue("Plaats " + nr2);
     titel.setFontWeight("bold");
 
-    // kopregel + data van dit diagram
-    var tabelRij = rij + 1;
-    graf.getRange(tabelRij, kolom).setValue("Vis");
-    graf.getRange(tabelRij, kolom + 1).setValue("Aantal");
-    for (var s = 0; s < soortNamen.length; s++) {
-      graf.getRange(tabelRij + 1 + s, kolom).setValue(soortNamen[s]);
-      graf.getRange(tabelRij + 1 + s, kolom + 1).setValue(soorten[soortNamen[s]]);
-    }
+    // data van dit diagram: elke soort is een eigen reeks (net als in Grafiek - Jaar)
+    var dataRij = 3 + i;
+    var kop = ["Plaats"].concat(soortNamen);
+    var waarden = ["Plaats " + nr2];
+    for (var s = 0; s < soortNamen.length; s++) waarden.push(soorten[soortNamen[s]]);
+    graf.getRange(dataRij, dataKolom, 1, 1 + soortNamen.length).setValues([kop]);
+    graf.getRange(dataRij + 1, dataKolom, 1, 1 + soortNamen.length).setValues([waarden]);
 
-    var bereik = graf.getRange(tabelRij, kolom, 1 + soortNamen.length, 2);
+    var bereik = graf.getRange(dataRij, dataKolom, 2, 1 + soortNamen.length);
     var chart = graf.newChart()
       .setChartType(Charts.ChartType.COLUMN)
       .addRange(bereik)
+      .setNumHeaders(1)
       .setOption("title", "Plaats " + nr2)
-      .setOption("hAxis.title", "Vissoort")
       .setOption("vAxis.title", "Aantal")
+      .setOption("isStacked", false)
+      .setOption("colors", kleurenVoor(soortNamen))
+      .setOption("legend", { position: "top", maxLines: 3, textStyle: { fontSize: 11 } })
       .setOption("width", diagramW)
       .setOption("height", diagramH)
-      .setPosition(rij + 1, kolom, 0, 0)
+      .setPosition(rij, kolom, 20, 0)
       .build();
     graf.insertChart(chart);
   }
