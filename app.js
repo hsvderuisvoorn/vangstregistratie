@@ -135,7 +135,7 @@ function procentNaarLatLng(x, y) {
 }
 
 function vindPlaats(x, y) {
-  var dichtste = null, beste = 4;
+  var dichtste = null, beste = 2.5;
   for (var i = 0; i < PLAATSEN.length; i++) {
     var p = PLAATSEN[i];
     var afstand = Math.sqrt((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y));

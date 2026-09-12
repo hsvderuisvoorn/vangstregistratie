@@ -65,6 +65,7 @@ function doPost(e) {
     }
 
     voegRijToe(sheet, data, plaatsOpGps);
+    werkGrafiekenBij();
 
     return json({ status: "ok" });
   } catch (err) {
@@ -125,8 +126,9 @@ var PLAATSEN = [
   { nr: 54, x: 13.2, y: 62.2 }, { nr: 55, x: 11.4, y: 57.3 }
 ];
 
-/* Afstandsdrempel (in % van de kaart) voor koppelen aan een plaats */
-var PLAATS_DREMPEL = 4;
+/* Afstandsdrempel (in % van de kaart) voor koppelen aan een plaats
+   Zelfde waarde als vindPlaats() in app.js. */
+var PLAATS_DREMPEL = 2.5;
 
 /* ============================================================
  *  GPS -> plaatsnummer
@@ -260,6 +262,201 @@ function waardeVoorKol(kop, data, plaatsOpGps) {
   if (kop === "Plaats_op_gps") return plaatsOpGps || "";
   if (kop === "Ingestuurd_op") return new Date();
   return "";
+}
+
+/* ============================================================
+ *  GRAFIEKEN
+ *  - "Grafiek - Jaar"   : totaal per jaar per vissoort (ALV)   *
+ *  - "Grafiek - Plaats" : totaal per plaats per vissoort (bestuur)
+ * ============================================================
+ *  Wordt automatisch ververst bij elke nieuwe registratie.
+ *  Handmatig: menu Vangsten > Grafieken verversen.
+ * ============================================================ */
+
+function werkGrafiekenBij() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var bron = ss.getSheetByName("Vangsten");
+  if (!bron) return;
+  var data = bron.getDataRange().getValues();
+  if (data.length < 2) return; // alleen kopregel
+
+  // oud tabblad "Grafieken" (van oudere versie) opruimen
+  var oud = ss.getSheetByName("Grafieken");
+  if (oud) ss.deleteSheet(oud);
+
+  bouwGrafiekJaar(data);
+  bouwGrafiekPlaats(data);
+}
+
+/* helpertje: kolomindexen uit de kopregel */
+function kolomIndexen(data) {
+  var koppen = data[0];
+  return {
+    datum: koppen.indexOf("Datum"),
+    maand: koppen.indexOf("Maand"),
+    soort: koppen.indexOf("Soort"),
+    aantal: koppen.indexOf("Aantal"),
+    plaats: koppen.indexOf("Plaats"),
+    plaatsGps: koppen.indexOf("Plaats_op_gps")
+  };
+}
+
+function jaarVanRij(rij, k) {
+  var m = String(rij[k.maand] || "").match(/^(\d{4})/);
+  if (m) return m[1];
+  var d = String(rij[k.datum] || "").match(/^(\d{4})/);
+  if (d) return d[1];
+  return "";
+}
+
+/* ---------- grafiek 1: totaal per jaar per vissoort (ALV) ---------- */
+
+function bouwGrafiekJaar(data) {
+  var k = kolomIndexen(data);
+  if (k.soort < 0 || k.aantal < 0) return;
+
+  var perJaar = {};       // jaar -> { soort -> totaal }
+  var alleSoorten = {};
+  for (var r = 1; r < data.length; r++) {
+    var jaar = jaarVanRij(data[r], k);
+    if (!jaar) continue;
+    var soort = String(data[r][k.soort] || "").trim();
+    var aantal = Number(data[r][k.aantal]);
+    if (!soort || !aantal) continue;
+    if (!perJaar[jaar]) perJaar[jaar] = {};
+    perJaar[jaar][soort] = (perJaar[jaar][soort] || 0) + aantal;
+    alleSoorten[soort] = 1;
+  }
+  var jaren = Object.keys(perJaar).sort();
+  if (jaren.length === 0) return;
+  var soorten = Object.keys(alleSoorten).sort();
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var blad = ss.getSheetByName("Grafiek - Jaar");
+  if (!blad) blad = ss.insertSheet("Grafiek - Jaar");
+  var bestaandeCharts = blad.getCharts();
+  for (var c = 0; c < bestaandeCharts.length; c++) blad.removeChart(bestaandeCharts[c]);
+  blad.clear();
+
+  blad.getRange(1, 1).setValue("Totaal gevangen per jaar per vissoort");
+  blad.getRange(1, 1).setFontWeight("bold");
+
+  var nRijen = 1 + jaren.length;
+  var nKol = 1 + soorten.length;
+  var inhoud = [["Jaar"].concat(soorten)];
+  for (var j = 0; j < jaren.length; j++) {
+    var rij = [jaren[j]];
+    for (var s = 0; s < soorten.length; s++) {
+      rij.push(perJaar[jaren[j]][soorten[s]] || 0);
+    }
+    inhoud.push(rij);
+  }
+  blad.getRange(3, 1, nRijen, nKol).setValues(inhoud);
+
+  var bereik = blad.getRange(3, 1, nRijen, nKol);
+  var chart = blad.newChart()
+    .setChartType(Charts.ChartType.COLUMN)
+    .addRange(bereik)
+    .setOption("title", "Vangsten per jaar per vissoort")
+    .setOption("hAxis.title", "Jaar")
+    .setOption("vAxis.title", "Aantal")
+    .setOption("isStacked", true)
+    .setOption("width", 900)
+    .setOption("height", 420)
+    .setPosition(3, nKol + 3, 0, 0)
+    .build();
+  blad.insertChart(chart);
+
+  blad.getRange(1, nKol + 3).setValue("BESTEMD VOOR DE ALV");
+  blad.getRange(1, nKol + 3).setFontWeight("bold");
+}
+
+/* ---------- grafiek 2: per plaats per vissoort (bestuur) ---------- */
+
+function bouwGrafiekPlaats(data) {
+  var k = kolomIndexen(data);
+  if (k.soort < 0 || k.aantal < 0 || (k.plaats < 0 && k.plaatsGps < 0)) return;
+
+  // per plaats: totaal aantal per vissoort (Plaats_op_gps heeft voorrang)
+  var perPlaats = {};
+  for (var r = 1; r < data.length; r++) {
+    var soort = String(data[r][k.soort] || "").trim();
+    var aantal = Number(data[r][k.aantal]);
+    if (!soort || !aantal) continue;
+    var plaats = data[r][k.plaatsGps] || data[r][k.plaats] || "";
+    if (plaats === "" || plaats === null) continue;
+    var nr = String(plaats);
+    if (!perPlaats[nr]) perPlaats[nr] = {};
+    perPlaats[nr][soort] = (perPlaats[nr][soort] || 0) + aantal;
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var graf = ss.getSheetByName("Grafiek - Plaats");
+  if (!graf) graf = ss.insertSheet("Grafiek - Plaats");
+  var bestaandeCharts = graf.getCharts();
+  for (var c = 0; c < bestaandeCharts.length; c++) graf.removeChart(bestaandeCharts[c]);
+  graf.clear();
+
+  var plaatsNrs = Object.keys(perPlaats).sort(function (a, b) { return Number(a) - Number(b); });
+
+  graf.getRange(1, 1).setValue("Vangsten per plaats (op basis van Plaats_op_gps, anders Plaats)");
+  graf.getRange(1, 1).setFontWeight("bold");
+  graf.getRange(1, 1).setNote("Automatisch bijgewerkt bij elke nieuwe registratie. Handmatig verversen: menu Vangsten > Grafieken verversen.");
+  graf.getRange(1, 8).setValue("BESTEMD VOOR HET BESTUUR");
+  graf.getRange(1, 8).setFontWeight("bold");
+
+  // 3 diagrammen per rij om het compacter te houden
+  var kolomBlok = 6;   // kolommen breed per diagram
+  var diagramW = 520;  // pixels breed
+  var diagramH = 260;  // pixels hoog
+  var startRij = 3;
+
+  for (var i = 0; i < plaatsNrs.length; i++) {
+    var nr2 = plaatsNrs[i];
+    var soorten = perPlaats[nr2];
+    var soortNamen = Object.keys(soorten).sort();
+
+    var rij = startRij + Math.floor(i / 3) * 40;
+    var kolom = 1 + (i % 3) * kolomBlok;
+
+    var titel = graf.getRange(rij, kolom);
+    titel.setValue("Plaats " + nr2);
+    titel.setFontWeight("bold");
+
+    // kopregel + data van dit diagram
+    var tabelRij = rij + 1;
+    graf.getRange(tabelRij, kolom).setValue("Vis");
+    graf.getRange(tabelRij, kolom + 1).setValue("Aantal");
+    for (var s = 0; s < soortNamen.length; s++) {
+      graf.getRange(tabelRij + 1 + s, kolom).setValue(soortNamen[s]);
+      graf.getRange(tabelRij + 1 + s, kolom + 1).setValue(soorten[soortNamen[s]]);
+    }
+
+    var bereik = graf.getRange(tabelRij, kolom, 1 + soortNamen.length, 2);
+    var chart = graf.newChart()
+      .setChartType(Charts.ChartType.COLUMN)
+      .addRange(bereik)
+      .setOption("title", "Plaats " + nr2)
+      .setOption("hAxis.title", "Vissoort")
+      .setOption("vAxis.title", "Aantal")
+      .setOption("width", diagramW)
+      .setOption("height", diagramH)
+      .setPosition(rij + 1, kolom, 0, 0)
+      .build();
+    graf.insertChart(chart);
+  }
+}
+
+function verversGrafieken() {
+  werkGrafiekenBij();
+  SpreadsheetApp.getUi().alert("Grafieken zijn bijgewerkt.");
+}
+
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu("Vangsten")
+    .addItem("Grafieken verversen", "verversGrafieken")
+    .addToUi();
 }
 
 function json(obj) {
