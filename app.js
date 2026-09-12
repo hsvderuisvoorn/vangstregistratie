@@ -63,7 +63,9 @@ var PLAATSEN = [
  */
 var KAART_PUNTEN = [
   { x: 1.3,  y: 28.8, lat: 51.334588, lon: 6.031775 },   // plek 3
-  { x: 50.4, y: 26.9, lat: 51.334653, lon: 6.033626 }    // plek 21
+  { x: 50.4, y: 26.9, lat: 51.334653, lon: 6.033626 },   // plek 21
+  { x: 8.1,  y: 52.8, lat: 51.334187, lon: 6.032008 },   // plek 1
+  { x: 83.8, y: 90.2, lat: 51.333471, lon: 6.034874 }    // onbekend nr., komt overeen met plek 35
 ];
 var KAART_BEREIK = null;
 var kaartFit = null;
