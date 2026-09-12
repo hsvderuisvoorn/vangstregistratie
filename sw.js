@@ -1,20 +1,18 @@
-var CACHE_NAME = "vangstregister-v11";
+var CACHE_NAME = "vangstregister-v12";
 var BESTanden = [
   "./index.html",
   "./style.css",
   "./app.js",
   "./manifest.json",
   "./vijverkaart.svg",
-  "./vijverkaart.jpg",
-  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  "./vijverkaart.jpg"
 ];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(
     caches.open(CACHE_NAME).then(function (cache) {
       return cache.addAll(BESTanden);
-    })
+    }).then(function () { return self.skipWaiting(); })
   );
 });
 
@@ -25,7 +23,7 @@ self.addEventListener("activate", function (e) {
         keys.filter(function (k) { return k !== CACHE_NAME; })
             .map(function (k) { return caches.delete(k); })
       );
-    })
+    }).then(function () { return self.clients.claim(); })
   );
 });
 

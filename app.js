@@ -72,6 +72,7 @@ var kaartFit = null;
 var modeKaart = "afbeelding";
 
 function fitKaart(punten) {
+  if (!punten || punten.length < 3) return false;
   var A = [], bx = [], by = [];
   for (var i = 0; i < punten.length; i++) {
     var p = punten[i];
@@ -93,6 +94,11 @@ function fitKaart(punten) {
   var alat = leastSquares(I, ilat);
   var alon = leastSquares(I, ilon);
   if (!alat || !alon) return false;
+
+  var alle = [].concat(omx, omy, alat, alon);
+  for (var k = 0; k < alle.length; k++) {
+    if (!isFinite(alle[k])) return false;
+  }
 
   kaartFit = { x: omx, y: omy, lat: alat, lon: alon };
   return true;
@@ -206,8 +212,8 @@ function initKaart() {
     modeKaart = "leaflet";
     var c1 = procentNaarLatLng(0, 0);
     var c2 = procentNaarLatLng(100, 100);
-    var sw = { lat: Math.min(c1.lat, c2.lat), lon: Math.min(c1.lon, c2.lon) };
-    var ne = { lat: Math.max(c1.lat, c2.lat), lon: Math.max(c1.lon, c2.lon) };
+    var sw = { lat: Math.min(c1.lat, c2.lat), lon: Math.min(c1.lng, c2.lng) };
+    var ne = { lat: Math.max(c1.lat, c2.lat), lon: Math.max(c1.lng, c2.lng) };
     els.kaartContainer.classList.add("leaflet-modus");
     map = L.map("kaart", { zoomControl: true });
     map.setView([(sw.lat + ne.lat) / 2, (sw.lon + ne.lon) / 2], 17);
