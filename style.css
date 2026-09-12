@@ -198,6 +198,30 @@ button.btn-secondary {
   flex: 0 1 auto;
 }
 
+#soortRegels { margin-bottom: 8px; }
+
+.soort-regel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  background: #f3f8f3;
+  border: 1px solid var(--rand);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.soort-regel .regel-soort { flex: 1 1 200px; }
+.soort-regel .regel-soort-overig { flex: 1 1 200px; }
+.soort-regel .regel-aantal { flex: 0 0 90px; }
+.soort-regel .regel-verwijder {
+  flex: 0 0 auto;
+  width: 36px;
+  min-width: 36px;
+  padding: 8px 0;
+}
+#voegSoortBtn { margin-bottom: 4px; }
+
 #verstuurBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 #uploadStatus { margin-top: 10px; font-size: 0.9rem; }

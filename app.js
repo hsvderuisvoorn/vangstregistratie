@@ -134,8 +134,10 @@ function procentNaarLatLng(x, y) {
   };
 }
 
-function vindPlaats(x, y) {
-  var dichtste = null, beste = 2.5;
+var DREMPEL_TIK = 5;
+
+function vindPlaats(x, y, drempel) {
+  var dichtste = null, beste = drempel != null ? drempel : 2.5;
   for (var i = 0; i < PLAATSEN.length; i++) {
     var p = PLAATSEN[i];
     var afstand = Math.sqrt((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y));
@@ -169,11 +171,11 @@ function saveEntries() {
 }
 
 /* Verschillende benoemde elementen */
+var SOORTEN = ["Voorn","Brasem","Spiegelkarper","Schubkarper","Graskarper","F1 (kruis-kroeskarper)","Bliek","Zeelt","Posje","Grondel","Zonnebaars","Snoek","Overig..."];
 var els = {
   datum: document.getElementById("datum"),
-  soort: document.getElementById("soort"),
-  soortOverig: document.getElementById("soortOverig"),
-  aantal: document.getElementById("aantal"),
+  soortRegels: document.getElementById("soortRegels"),
+  voegSoortBtn: document.getElementById("voegSoortBtn"),
   visser: document.getElementById("visser"),
   opmerking: document.getElementById("opmerking"),
   verstuurBtn: document.getElementById("verstuurBtn"),
@@ -297,18 +299,10 @@ function verwerkKaartKlik(x, y) {
   }
 }
 
-function plaatsMarker(x, y) {
-  state.markerPos = { x: x, y: y };
-  els.marker.classList.remove("hidden");
-  els.marker.style.left = x + "%";
-  els.marker.style.top = y + "%";
-  updateLocatieInfo();
-}
-
 function updateLocatieInfo() {
   var delen = [];
   if (state.markerPos) {
-    var p = vindPlaats(state.markerPos.x, state.markerPos.y);
+    var p = vindPlaats(state.markerPos.x, state.markerPos.y, DREMPEL_TIK);
     if (p) delen.push("Plaats " + p.nr);
   }
   if (state.gps) {
@@ -432,56 +426,145 @@ function vraagKalibratiePunt(x, y) {
 
 /* -------- Formulier -------- */
 
-els.soort.addEventListener("change", function () {
-  els.soortOverig.classList.toggle("hidden", els.soort.value !== "Overig...");
+function maakSoortRegel(soort, overig, aantal) {
+  var rij = document.createElement("div");
+  rij.className = "soort-regel";
+
+  var sel = document.createElement("select");
+  sel.className = "regel-soort";
+  var placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Kies een soort...";
+  sel.appendChild(placeholder);
+  SOORTEN.forEach(function (s) {
+    var o = document.createElement("option");
+    o.textContent = s;
+    if (s === soort) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.value = soort || "";
+
+  var txt = document.createElement("input");
+  txt.type = "text";
+  txt.className = "regel-soort-overig hidden";
+  txt.placeholder = "Welke soort?";
+  txt.value = overig || "";
+
+  var aantalIn = document.createElement("input");
+  aantalIn.type = "number";
+  aantalIn.className = "regel-aantal";
+  aantalIn.min = "1";
+  aantalIn.step = "1";
+  aantalIn.inputMode = "numeric";
+  aantalIn.placeholder = "Aantal";
+  if (aantal) aantalIn.value = aantal;
+
+  var verwijder = document.createElement("button");
+  verwijder.type = "button";
+  verwijder.className = "btn-secondary regel-verwijder";
+  verwijder.textContent = "\u2715";
+  verwijder.title = "Deze soort verwijderen";
+  verwijder.addEventListener("click", function () {
+    rij.remove();
+    updateVerwijderKnoppen();
+  });
+
+  sel.addEventListener("change", function () {
+    txt.classList.toggle("hidden", sel.value !== "Overig...");
+  });
+
+  rij.appendChild(sel);
+  rij.appendChild(txt);
+  rij.appendChild(aantalIn);
+  rij.appendChild(verwijder);
+  els.soortRegels.appendChild(rij);
+  updateVerwijderKnoppen();
+  return rij;
+}
+
+function updateVerwijderKnoppen() {
+  var knoppen = els.soortRegels.querySelectorAll(".regel-verwijder");
+  [].forEach.call(knoppen, function (k, i) {
+    k.classList.toggle("hidden", i === 0 && knoppen.length === 1);
+  });
+}
+
+function leesSoortRegels() {
+  return [].map.call(els.soortRegels.querySelectorAll(".soort-regel"), function (rij) {
+    var sel = rij.querySelector(".regel-soort");
+    var overig = rij.querySelector(".regel-soort-overig");
+    var aantal = rij.querySelector(".regel-aantal");
+    var soort = sel.value === "Overig..." ? overig.value.trim() : sel.value;
+    var a = parseInt(aantal.value, 10);
+    return { soort: soort, aantal: (a > 0) ? a : 0 };
+  });
+}
+
+els.voegSoortBtn.addEventListener("click", function () {
+  maakSoortRegel();
 });
 
 els.verstuurBtn.addEventListener("click", function () {
-  var entry = bouwEntry();
-  if (!entry) return;
-  state.entries.push(entry);
-  saveEntries();
-  verstuur(entry);
+  var entries = bouwEntries();
+  if (!entries) return;
+  entries.forEach(function (entry) {
+    state.entries.push(entry);
+    saveEntries();
+    verstuur(entry);
+  });
   toonLijst();
   resetForm();
 });
 
-function bouwEntry() {
+function bouwEntries() {
   var datum = els.datum.value;
-  var soort = els.soort.value === "Overig..." ? els.soortOverig.value.trim() : els.soort.value;
-  var aantal = parseInt(els.aantal.value, 10);
+  var visser = els.visser.value.trim();
+  var opmerking = els.opmerking.value.trim();
+  var regels = leesSoortRegels().filter(function (r) { return r.soort && r.aantal; });
+
   if (!datum) { foutMelding("Kies een datum."); return null; }
-  if (!soort) { foutMelding("Kies een vissoort."); return null; }
-  if (!aantal || aantal < 1) { foutMelding("Vul een geldig aantal in."); return null; }
+  if (regels.length === 0) { foutMelding("Vul minstens een vissoort met aantal in."); return null; }
 
   var plaats = "";
   if (state.markerPos) {
-    var gevonden = vindPlaats(state.markerPos.x, state.markerPos.y);
+    var gevonden = vindPlaats(state.markerPos.x, state.markerPos.y, DREMPEL_TIK);
     if (gevonden) plaats = gevonden.nr;
   }
 
-  var entry = {
-    id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
-    datum: datum,
-    soort: soort,
-    aantal: aantal,
-    gps_lat: state.gps ? state.gps.lat : "",
-    gps_lon: state.gps ? state.gps.lon : "",
-    kaart_x: state.markerPos ? Math.round(state.markerPos.x * 10) / 10 : "",
-    kaart_y: state.markerPos ? Math.round(state.markerPos.y * 10) / 10 : "",
-    plaats: plaats,
-    visser: els.visser.value.trim(),
-    opmerking: els.opmerking.value.trim(),
-    synced: false
-  };
-  return entry;
+  return regels.map(function (r) {
+    return {
+      id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+      datum: datum,
+      soort: r.soort,
+      aantal: r.aantal,
+      gps_lat: state.gps ? state.gps.lat : "",
+      gps_lon: state.gps ? state.gps.lon : "",
+      kaart_x: state.markerPos ? Math.round(state.markerPos.x * 10) / 10 : "",
+      kaart_y: state.markerPos ? Math.round(state.markerPos.y * 10) / 10 : "",
+      plaats: plaats,
+      visser: visser,
+      opmerking: opmerking,
+      synced: false
+    };
+  });
 }
 
 function resetForm() {
-  els.soort.value = "";
-  els.soortOverig.value = "";
-  els.soortOverig.classList.add("hidden");
-  els.aantal.value = "";
+  var regels = els.soortRegels.querySelectorAll(".soort-regel");
+  [].forEach.call(regels, function (rij, i) {
+    if (i === 0) {
+      var sel = rij.querySelector(".regel-soort");
+      var overig = rij.querySelector(".regel-soort-overig");
+      var aantal = rij.querySelector(".regel-aantal");
+      sel.value = "";
+      overig.value = "";
+      overig.classList.add("hidden");
+      aantal.value = "";
+    } else {
+      rij.remove();
+    }
+  });
+  updateVerwijderKnoppen();
   els.visser.value = "";
   els.opmerking.value = "";
   state.markerPos = null;
@@ -696,5 +779,6 @@ window.plaatsenHulp = function () {
 
 initKaart();
 initDatum();
+maakSoortRegel();
 toonLijst();
 automatischeSync();

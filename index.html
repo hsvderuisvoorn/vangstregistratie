@@ -43,27 +43,8 @@
       <label for="datum">Datum</label>
       <input type="date" id="datum" required>
 
-      <label for="soort">Vissoort</label>
-      <select id="soort">
-        <option value="">Kies een soort...</option>
-        <option>Voorn</option>
-        <option>Brasem</option>
-        <option>Spiegelkarper</option>
-        <option>Schubkarper</option>
-        <option>Graskarper</option>
-        <option>F1 (kruis-kroeskarper)</option>
-        <option>Bliek</option>
-        <option>Zeelt</option>
-        <option>Posje</option>
-        <option>Grondel</option>
-        <option>Zonnebaars</option>
-        <option>Snoek</option>
-        <option>Overig...</option>
-      </select>
-      <input type="text" id="soortOverig" placeholder="Welke soort?" class="hidden">
-
-      <label for="aantal">Aantal vissen</label>
-      <input type="number" id="aantal" min="1" step="1" inputmode="numeric" placeholder="Bijv. 3">
+      <div id="soortRegels"></div>
+      <button id="voegSoortBtn" type="button" class="btn-secondary">＋ Nog een soort toevoegen</button>
 
       <label for="visser">Visser <small>(optioneel)</small></label>
       <input type="text" id="visser" placeholder="Naam of anoniem" autocomplete="name">
