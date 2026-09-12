@@ -1,10 +1,13 @@
-var CACHE_NAME = "vangstregister-v8";
+var CACHE_NAME = "vangstregister-v9";
 var BESTanden = [
   "./index.html",
   "./style.css",
   "./app.js",
   "./manifest.json",
-  "./vijverkaart.svg"
+  "./vijverkaart.svg",
+  "./vijverkaart.jpg",
+  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
 ];
 
 self.addEventListener("install", function (e) {

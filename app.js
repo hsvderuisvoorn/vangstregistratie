@@ -55,6 +55,32 @@ var PLAATSEN = [
   { nr: 54, x: 13.2, y: 62.2 }, { nr: 55, x: 11.4, y: 57.3 }
 ];
 
+/* ===== GEOREFERENTIE VAN DE VIJVERKAART (GPS-koppeling) =====
+ * Zet hier de GPS-coördinaten van 2 hoekpunten van de vijverkaart neer.
+ * Zo kun je de kaart over OpenStreetMap leggen en klopt elke GPS-locatie.
+ *   sw = zuidwest (linksonder), ne = noordoost (rechtsboven)
+ * Vind de coördinaten via Google Maps: klik met rechtermuisknop op een
+ * herkenbaar punt van de kaart (bijv. hoekpunt van de vijver) en kies
+ * "Wat is hier?" — kopieer de twee getallen.
+ *
+ * Voorbeeld:
+ *   var KAART_BEREIK = { sw: { lat: 49.01, lon: 5.10 }, ne: { lat: 49.05, lon: 5.20 } };
+ */
+var KAART_BEREIK = null;
+var modeKaart = "afbeelding";
+
+function latLngNaarProcent(lat, lng) {
+  var sw = KAART_BEREIK.sw, ne = KAART_BEREIK.ne;
+  var x = ((lng - sw.lon) / (ne.lon - sw.lon)) * 100;
+  var y = ((ne.lat - lat) / (ne.lat - sw.lat)) * 100;
+  return { x: x, y: y };
+}
+
+function procentNaarLatLng(x, y) {
+  var sw = KAART_BEREIK.sw, ne = KAART_BEREIK.ne;
+  return { lat: ne.lat - ((y / 100) * (ne.lat - sw.lat)), lng: sw.lon + ((x / 100) * (ne.lon - sw.lon)) };
+}
+
 function vindPlaats(x, y) {
   var dichtste = null, beste = 4;
   for (var i = 0; i < PLAATSEN.length; i++) {
@@ -110,7 +136,8 @@ var els = {
   registratieLijst: document.getElementById("registratieLijst"),
   exportBtn: document.getElementById("exportBtn"),
   syncBtn: document.getElementById("syncBtn"),
-  syncStatus: document.getElementById("syncStatus")
+  syncStatus: document.getElementById("syncStatus"),
+  kaart: document.getElementById("kaart")
 };
 
 function initDatum() {
@@ -123,7 +150,80 @@ function initDatum() {
 
 /* -------- Vijverkaart: tik om locatie te markeren -------- */
 
+var map = null;
+var leafletMarker = null;
+
+function initKaart() {
+  if (typeof window.L !== "undefined" && KAART_BEREIK) {
+    modeKaart = "leaflet";
+    els.kaartContainer.classList.add("leaflet-modus");
+    map = L.map("kaart", { zoomControl: true });
+    map.setView([
+      (KAART_BEREIK.sw.lat + KAART_BEREIK.ne.lat) / 2,
+      (KAART_BEREIK.sw.lon + KAART_BEREIK.ne.lon) / 2
+    ], 17);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap-bijdragers"
+    }).addTo(map);
+    L.imageOverlay(MAP_IMAGE, [
+      [KAART_BEREIK.sw.lat, KAART_BEREIK.sw.lon],
+      [KAART_BEREIK.ne.lat, KAART_BEREIK.ne.lon]
+    ], { opacity: 0.8 }).addTo(map);
+    map.fitBounds([
+      [KAART_BEREIK.sw.lat, KAART_BEREIK.sw.lon],
+      [KAART_BEREIK.ne.lat, KAART_BEREIK.ne.lon]
+    ]);
+    map.on("click", function (ev) {
+      var p = latLngNaarProcent(ev.latlng.lat, ev.latlng.lng);
+      verwerkKaartKlik(p.x, p.y);
+    });
+  }
+}
+
+function plaatsMarker(x, y) {
+  state.markerPos = { x: x, y: y };
+  if (modeKaart === "leaflet" && map) {
+    var ll = procentNaarLatLng(x, y);
+    if (!leafletMarker) {
+      leafletMarker = L.marker([ll.lat, ll.lng], {
+        icon: L.divIcon({
+          className: "",
+          html: '<div class="leaflet-pin"></div>',
+          iconSize: [26, 26],
+          iconAnchor: [13, 26]
+        })
+      }).addTo(map);
+    } else {
+      leafletMarker.setLatLng([ll.lat, ll.lng]);
+    }
+  } else {
+    els.marker.classList.remove("hidden");
+    els.marker.style.left = x + "%";
+    els.marker.style.top = y + "%";
+  }
+  updateLocatieInfo();
+}
+
+function verplaatsVanGps(gps) {
+  var kaartPos = null;
+  if (modeKaart === "leaflet") {
+    kaartPos = latLngNaarProcent(gps.lat, gps.lon);
+    if (kaartPos.x < 0 || kaartPos.x > 100 || kaartPos.y < 0 || kaartPos.y > 100) kaartPos = null;
+  } else {
+    kaartPos = gpsNaarKaart(gps);
+  }
+  if (kaartPos) {
+    plaatsMarker(kaartPos.x, kaartPos.y);
+    toonGpsStatus("GPS-locatie vastgelegd én op de kaart gezet (nauwkeurigheid ±" + Math.round(gps.acc) + " m).", false);
+  } else {
+    toonGpsStatus("GPS-locatie vastgelegd (nauwkeurigheid ±" + Math.round(gps.acc) + " m), maar de locatie ligt buiten de kaart.", false);
+    updateLocatieInfo();
+  }
+}
+
 function muisOpKaart(e) {
+  if (modeKaart !== "afbeelding") return;
   e.preventDefault();
   var rect = els.kaartContainer.getBoundingClientRect();
   var x = ((e.clientX - rect.left) / rect.width) * 100;
@@ -175,14 +275,7 @@ function haalGpsOp() {
   toonGpsStatus("Locatie ophalen...");
   navigator.geolocation.getCurrentPosition(function (pos) {
     state.gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy };
-    toonGpsStatus("GPS-locatie vastgelegd (nauwkeurigheid ±" + Math.round(pos.coords.accuracy) + " m). Tik op de kaart om bij te stellen.", false);
-    var kaartPos = gpsNaarKaart(state.gps);
-    if (kaartPos) {
-      plaatsMarker(kaartPos.x, kaartPos.y);
-      toonGpsStatus("GPS-locatie vastgelegd én op de kaart gezet (nauwkeurigheid ±" + Math.round(pos.coords.accuracy) + " m).", false);
-    } else {
-      updateLocatieInfo();
-    }
+    verplaatsVanGps(state.gps);
   }, function (fout) {
     var bericht = "GPS niet beschikbaar (";
     if (fout.code === 1) bericht += "toestemming geweigerd";
@@ -336,6 +429,7 @@ function resetForm() {
   els.opmerking.value = "";
   state.markerPos = null;
   state.gps = null;
+  if (leafletMarker && map) { map.removeLayer(leafletMarker); leafletMarker = null; }
   els.marker.classList.add("hidden");
   els.gpsStatus.classList.add("hidden");
   els.gpsStatus.textContent = "";
@@ -496,6 +590,7 @@ els.gpsBtn.addEventListener("click", haalGpsOp);
 els.gpsResetBtn.addEventListener("click", function () {
   state.gps = null;
   state.markerPos = null;
+  if (leafletMarker && map) { map.removeLayer(leafletMarker); leafletMarker = null; }
   els.marker.classList.add("hidden");
   els.gpsStatus.classList.add("hidden");
   els.gpsStatus.textContent = "";
@@ -503,6 +598,7 @@ els.gpsResetBtn.addEventListener("click", function () {
 });
 els.kaartContainer.addEventListener("click", muisOpKaart);
 els.kaartContainer.addEventListener("touchend", function (e) {
+  if (modeKaart !== "afbeelding") return;
   var touch = e.changedTouches[0];
   if (!touch) return;
   var rect = els.kaartContainer.getBoundingClientRect();
@@ -524,5 +620,6 @@ window.plaatsenHulp = function () {
   }
 };
 
+initKaart();
 initDatum();
 toonLijst();
