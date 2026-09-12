@@ -40,6 +40,25 @@ function doGet() {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
+function stuurMelding(data, plaatsOpGps) {
+  try {
+    var ontvanger = "paul@hsvderuisvoorn.nl";
+    var subject = "Nieuwe vangst: " + (data.soort || "") + " x " + (data.aantal || "");
+    var body =
+      "Soort: " + (data.soort || "") + "\n" +
+      "Aantal: " + (data.aantal || "") + "\n" +
+      "Datum: " + (data.datum || "") + "\n" +
+      "Plaats (handmatig/kaart): " + (data.plaats ? data.plaats : "-") + "\n" +
+      "Plaats (via GPS): " + (plaatsOpGps ? plaatsOpGps : "-") + "\n" +
+      "GPS: " + (data.gps_lat ? (data.gps_lat + ", " + data.gps_lon) : "-") + "\n" +
+      "Visser: " + (data.visser ? data.visser : "-") + "\n" +
+      "Opmerking: " + (data.opmerking ? data.opmerking : "-");
+    MailApp.sendEmail(ontvanger, subject, body);
+  } catch (e) {
+    // nooit laten mislukken: melding is extra, de registratie is al opgeslagen
+  }
+}
+
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -66,6 +85,7 @@ function doPost(e) {
 
     voegRijToe(sheet, data, plaatsOpGps);
     werkGrafiekenBij();
+    stuurMelding(data, plaatsOpGps);
 
     return json({ status: "ok" });
   } catch (err) {
