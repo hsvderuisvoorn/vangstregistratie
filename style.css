@@ -259,6 +259,18 @@ button.btn-secondary {
 
 .hulp { font-size: 0.8rem; color: var(--grijs); margin-top: 6px; }
 
+.install-summary {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--groen);
+  cursor: pointer;
+  list-style: none;
+}
+.install-summary::-webkit-details-marker { display: none; }
+.install-inhoud { margin-top: 10px; }
+.install-inhoud p { margin-bottom: 8px; font-size: 0.9rem; }
+.install-inhoud p:last-child { margin-bottom: 0; }
+
 footer {
   text-align: center;
   padding: 14px;
