@@ -367,7 +367,6 @@ function werkGrafiekenBij() {
   var bron = ss.getSheetByName("Vangsten");
   if (!bron) return;
   var data = bron.getDataRange().getValues();
-  if (data.length < 2) return; // alleen kopregel
 
   // oud tabblad "Grafieken" (van oudere versie) opruimen
   var oud = ss.getSheetByName("Grafieken");
@@ -422,10 +421,8 @@ function bouwGrafiekJaar(data) {
     alleSoorten[soort] = 1;
   }
   var jaren = Object.keys(perJaar).sort();
-  if (jaren.length === 0) return;
   var soorten = Object.keys(alleSoorten).sort();
 
-  // eerste rij als soortsnamen, zodat de legenda bovenin de vissoorten toont
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var blad = ss.getSheetByName("Grafiek - Jaar");
   if (!blad) blad = ss.insertSheet("Grafiek - Jaar");
@@ -435,6 +432,11 @@ function bouwGrafiekJaar(data) {
 
   blad.getRange(1, 1).setValue("Totaal gevangen per jaar per vissoort");
   blad.getRange(1, 1).setFontWeight("bold");
+
+  if (jaren.length === 0) {
+    blad.getRange(3, 1).setValue("Nog geen vangsten geregistreerd.");
+    return;
+  }
 
   var nRijen = 1 + jaren.length;
   var nKol = 1 + soorten.length;
