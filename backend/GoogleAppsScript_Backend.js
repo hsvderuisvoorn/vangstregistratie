@@ -40,36 +40,6 @@ function doGet() {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
-function stuurMelding(data, soorten, plaatsOpGps) {
-  try {
-    var ontvanger = "jpgpthijssen@gmail.com";
-    var soortenRegels = [];
-    var totaal = 0;
-    for (var i = 0; i < soorten.length; i++) {
-      var s = soorten[i];
-      var naam = String(s.soort || "").trim();
-      var a = Number(s.aantal) || 0;
-      if (!naam || a <= 0) continue;
-      soortenRegels.push("- " + naam + " x " + a);
-      totaal += a;
-    }
-    if (soortenRegels.length === 0) return;
-    var subject = "Nieuwe vangstregistratie: " + soortenRegels.length + " soort(en), totaal " + totaal + " vis(sen)";
-    var body = "Datum: " + (data.datum || "-") + "\n\n" +
-      "Soorten:\n" + soortenRegels.join("\n") + "\n\n" +
-      "Plaats (handmatig/kaart): " + (data.plaats ? String(data.plaats) : "-") + "\n" +
-      "Plaats (via GPS): " + (plaatsOpGps ? plaatsOpGps : "-") + "\n" +
-      "GPS: " + (data.gps_lat ? (data.gps_lat + ", " + data.gps_lon) : "-") + "\n" +
-      "Visser: " + (data.visser ? data.visser : "-") + "\n" +
-      "Opmerking: " + (data.opmerking ? data.opmerking : "-");
-    MailApp.sendEmail(ontvanger, subject, body);
-  } catch (e) {
-    // nooit laten mislukken: melding is extra, de registratie is al opgeslagen.
-    // Wél loggen zodat de oorzaak zichtbaar is (Uitvoeringen/Executions in Apps Script).
-    console.error("Mail naar " + (ontvanger || "?") + " mislukt: " + e.toString());
-  }
-}
-
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -122,7 +92,6 @@ function doPost(e) {
     }
 
     werkGrafiekenBij();
-    stuurMelding(data, soorten, plaatsOpGps);
 
     return json({ status: "ok" });
   } catch (err) {
