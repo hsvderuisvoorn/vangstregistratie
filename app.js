@@ -135,6 +135,13 @@ function toonGpsStatus(tekst, isFout) {
   els.gpsStatus.classList.toggle("waarschuwing", !!isFout);
 }
 
+function toonLocatieMelding(tekst) {
+  var el = document.getElementById("locatieMelding");
+  if (!el) return;
+  el.textContent = tekst;
+  el.classList.toggle("hidden", !tekst);
+}
+
 function haalGpsOp() {
   if (!navigator.geolocation) {
     toonGpsStatus("GPS wordt niet ondersteund door dit apparaat. Vul het plaatsnummer handmatig in.", true);
@@ -145,6 +152,7 @@ function haalGpsOp() {
     state.gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy };
     if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
     toonGpsStatus("GPS-locatie vastgelegd (nauwkeurigheid ±" + Math.round(pos.coords.accuracy) + " m).", false);
+    toonLocatieMelding("");
     updateLocatieInfo();
   }, function (fout) {
     var bericht = "GPS niet beschikbaar (";
@@ -258,15 +266,23 @@ function bouwEntries() {
   if (regels.length === 0) { foutMelding("Vul minstens een vissoort met aantal in."); return null; }
 
   var handmatig = els.plaatsHandmatig ? els.plaatsHandmatig.value.trim() : "";
+  var heeftGps = !!state.gps;
+  if (handmatig === "" && !heeftGps) {
+    foutMelding("Kies eerst je locatie: druk op de GPS-knop of vul een plaatsnummer in.");
+    toonLocatieMelding("Geen locatie gekozen. Kies de GPS-knop of vul een plaatsnummer in.");
+    return null;
+  }
   var plaats = "";
   if (handmatig !== "") {
     var nrHand = Number(handmatig);
     if (!plaatsBestaat(nrHand)) {
       foutMelding("Plaatsnummer " + nrHand + " bestaat niet (kies een geldig nummer).");
+      toonLocatieMelding("Plaatsnummer " + nrHand + " bestaat niet.");
       return null;
     }
     plaats = nrHand;
   }
+  toonLocatieMelding("");
 
   var sessieId = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
   return regels.map(function (r, i) {
@@ -310,6 +326,7 @@ function resetForm() {
   els.gpsStatus.classList.add("hidden");
   els.gpsStatus.textContent = "";
   if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
+  toonLocatieMelding("");
   updateLocatieInfo();
 }
 
@@ -504,8 +521,10 @@ els.plaatsHandmatig.addEventListener("input", function () {
   var nr = Number(v);
   if (plaatsBestaat(nr)) {
     toonGpsStatus("Plaats " + nr + " handmatig gekozen.", false);
+    toonLocatieMelding("");
   } else {
     toonGpsStatus("Plaatsnummer " + v + " bestaat niet (kies een geldig nummer).", true);
+    toonLocatieMelding("Plaatsnummer " + v + " bestaat niet.");
   }
   updateLocatieInfo();
 });

@@ -104,6 +104,30 @@ input:focus, select:focus { outline: 2px solid var(--groen-licht); }
 }
 .gps-status.waarschuwing { color: var(--fout); }
 
+.locatie-uitleg {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+}
+
+.verplicht-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--fout);
+  border: 1px solid var(--fout);
+  border-radius: 999px;
+  padding: 2px 8px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.locatie-melding {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fout);
+}
+
 .locatie-info {
   font-size: 0.85rem;
   color: var(--grijs);

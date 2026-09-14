@@ -19,19 +19,21 @@
 
   <main>
     <section id="kaartSectie" class="card">
-      <h2>1. Waar heb je gevist?</h2>
+      <h2>1. Waar heb je gevist? <span class="verplicht-tag">verplicht</span></h2>
       <div id="kaartContainer">
         <img id="kaartImg" src="vijverkaart.jpg"
              onerror="this.onerror=null; this.src='vijverkaart.svg';"
              alt="Plattegrond van de vijver" draggable="false">
       </div>
       <div id="gpsStatus" class="gps-status hidden"></div>
+      <p class="locatie-uitleg">Kies je locatie: gebruik de <strong>GPS-knop</strong> óf vul een <strong>plaatsnummer</strong> in.</p>
       <div class="btn-row">
         <button id="gpsBtn" type="button">📍 Automatische GPS-locatie</button>
         <button id="gpsResetBtn" type="button" class="btn-secondary">↺ Wissen</button>
       </div>
       <label for="plaatsHandmatig">Plaatsnummer <small>(handmatig invullen als GPS niet lukt, of thuis invullen)</small></label>
       <input type="number" id="plaatsHandmatig" min="1" max="55" inputmode="numeric" placeholder="Bijv. 12">
+      <p id="locatieMelding" class="locatie-melding hidden"></p>
     </section>
 
     <section id="formSectie" class="card">
