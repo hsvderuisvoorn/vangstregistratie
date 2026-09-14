@@ -43,7 +43,7 @@ function doGet() {
 /* ---------- wekelijkse herinnering (1x per week) ---------- */
 
 function stuurWeekHerinnering() {
-  var ontvanger = "jpgpthijssen@gmail.com";
+  var ontvanger = "paul@hsvderuisvoorn.nl";
   var body = "Vergeet niet de gegevens van de hengelvangstregistratie te verversen.\n\n" +
     "App: https://hsvderuisvoorn.github.io/vangstregistratie/";
   MailApp.sendEmail(ontvanger, "Hengelvangstregistratie - wekelijkse herinnering", body);
