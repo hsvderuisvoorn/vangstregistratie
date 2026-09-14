@@ -2,7 +2,6 @@
 
 var SETTINGS_KEY = "vangst_settings";
 var ENTRIES_KEY = "vangst_entries";
-var MAP_IMAGE = "vijverkaart.jpg";
 
 /* ===== BACKEND-URL VAN DE VERENIGING =====
  * Plak hier de web-app-URL uit de Google Apps Script-handleiding
@@ -55,97 +54,6 @@ var PLAATSEN = [
   { nr: 54, x: 13.2, y: 62.2 }, { nr: 55, x: 11.4, y: 57.3 }
 ];
 
-/* ===== GEOREFERENTIE VAN DE VIJVERKAART (GPS-koppeling) =====
- * Vul hier minimaal 3 duidelijk verdeelde punten in:
- * op de kaart (x, y in procenten) met hun echte GPS-coördinaten.
- * Vind de GPS via Google Maps: rechtsklik > "Wat is hier?".
- * De app rekent hiermee zelf de koppeling uit.
- */
-var KAART_PUNTEN = [
-  { x: 1.3,  y: 28.8, lat: 51.334588, lon: 6.031775 },   // plek 3
-  { x: 50.4, y: 26.9, lat: 51.334653, lon: 6.033626 },   // plek 21
-  { x: 8.1,  y: 52.8, lat: 51.334187, lon: 6.032008 },   // plek 1
-  { x: 83.8, y: 90.2, lat: 51.333471, lon: 6.034874 }    // ~plek 35
-];
-var KAART_BEREIK = null;
-var kaartFit = null;
-var modeKaart = "afbeelding";
-
-function fitKaart(punten) {
-  if (!punten || punten.length < 3) return false;
-  var A = [], bx = [], by = [];
-  for (var i = 0; i < punten.length; i++) {
-    var p = punten[i];
-    A.push([1, p.lat, p.lon]);
-    bx.push(p.x);
-    by.push(p.y);
-  }
-  var omx = leastSquares(A, bx);
-  var omy = leastSquares(A, by);
-  if (!omx || !omy) return false;
-
-  var I = [], ilat = [], ilon = [];
-  for (var j = 0; j < punten.length; j++) {
-    var q = punten[j];
-    I.push([1, q.x, q.y]);
-    ilat.push(q.lat);
-    ilon.push(q.lon);
-  }
-  var alat = leastSquares(I, ilat);
-  var alon = leastSquares(I, ilon);
-  if (!alat || !alon) return false;
-
-  var alle = [].concat(omx, omy, alat, alon);
-  for (var k = 0; k < alle.length; k++) {
-    if (!isFinite(alle[k])) return false;
-  }
-
-  kaartFit = { x: omx, y: omy, lat: alat, lon: alon };
-  return true;
-}
-
-function latLngNaarProcent(lat, lng) {
-  if (kaartFit) {
-    return {
-      x: Math.max(0, Math.min(100, kaartFit.x[0] + kaartFit.x[1] * lat + kaartFit.x[2] * lng)),
-      y: Math.max(0, Math.min(100, kaartFit.y[0] + kaartFit.y[1] * lat + kaartFit.y[2] * lng))
-    };
-  }
-  if (!KAART_BEREIK) return null;
-  var sw = KAART_BEREIK.sw, ne = KAART_BEREIK.ne;
-  return {
-    x: ((lng - sw.lon) / (ne.lon - sw.lon)) * 100,
-    y: ((ne.lat - lat) / (ne.lat - sw.lat)) * 100
-  };
-}
-
-function procentNaarLatLng(x, y) {
-  if (kaartFit) {
-    return {
-      lat: kaartFit.lat[0] + kaartFit.lat[1] * x + kaartFit.lat[2] * y,
-      lng: kaartFit.lon[0] + kaartFit.lon[1] * x + kaartFit.lon[2] * y
-    };
-  }
-  if (!KAART_BEREIK) return null;
-  var sw = KAART_BEREIK.sw, ne = KAART_BEREIK.ne;
-  return {
-    lat: ne.lat - ((y / 100) * (ne.lat - sw.lat)),
-    lng: sw.lon + ((x / 100) * (ne.lon - sw.lon))
-  };
-}
-
-var DREMPEL_TIK = 5;
-
-function vindPlaats(x, y, drempel) {
-  var dichtste = null, beste = drempel != null ? drempel : 2.5;
-  for (var i = 0; i < PLAATSEN.length; i++) {
-    var p = PLAATSEN[i];
-    var afstand = Math.sqrt((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y));
-    if (afstand < beste) { beste = afstand; dichtste = p; }
-  }
-  return dichtste;
-}
-
 function kaartPosUitPlaats(nr) {
   for (var i = 0; i < PLAATSEN.length; i++) {
     if (PLAATSEN[i].nr === nr) return { x: PLAATSEN[i].x, y: PLAATSEN[i].y };
@@ -160,10 +68,7 @@ function plaatsBestaat(nr) {
 var state = {
   settings: loadSettings(),
   entries: loadEntries(),
-  markerPos: null,
-  gps: null,
-  kalibratieModus: false,
-  plaatsModus: false
+  gps: null
 };
 
 function loadSettings() {
@@ -191,20 +96,16 @@ var els = {
   opmerking: document.getElementById("opmerking"),
   verstuurBtn: document.getElementById("verstuurBtn"),
   uploadStatus: document.getElementById("uploadStatus"),
-  kaartContainer: document.getElementById("kaartContainer"),
-  marker: document.getElementById("marker"),
-  kaartHint: document.getElementById("kaartHint"),
   gpsStatus: document.getElementById("gpsStatus"),
   locatieInfo: document.getElementById("locatieInfo"),
-gpsBtn: document.getElementById("gpsBtn"),
+  gpsBtn: document.getElementById("gpsBtn"),
   gpsResetBtn: document.getElementById("gpsResetBtn"),
   plaatsHandmatig: document.getElementById("plaatsHandmatig"),
   lijstSectie: document.getElementById("lijstSectie"),
   registratieLijst: document.getElementById("registratieLijst"),
   exportBtn: document.getElementById("exportBtn"),
   syncBtn: document.getElementById("syncBtn"),
-  syncStatus: document.getElementById("syncStatus"),
-  kaart: document.getElementById("kaart")
+  syncStatus: document.getElementById("syncStatus")
 };
 
 function initDatum() {
@@ -215,138 +116,17 @@ function initDatum() {
   els.datum.value = yyyy + "-" + mm + "-" + dd;
 }
 
-/* -------- Vijverkaart: tik om locatie te markeren -------- */
-
-var map = null;
-var leafletMarker = null;
-
-function initKaart() {
-  if (typeof window.L === "undefined") return;
-  if (KAART_PUNTEN && KAART_PUNTEN.length >= 3 && fitKaart(KAART_PUNTEN)) {
-    modeKaart = "leaflet";
-    var c1 = procentNaarLatLng(0, 0);
-    var c2 = procentNaarLatLng(100, 100);
-    var sw = { lat: Math.min(c1.lat, c2.lat), lon: Math.min(c1.lng, c2.lng) };
-    var ne = { lat: Math.max(c1.lat, c2.lat), lon: Math.max(c1.lng, c2.lng) };
-    els.kaartContainer.classList.add("leaflet-modus");
-    map = L.map("kaart", { zoomControl: true });
-    map.setView([(sw.lat + ne.lat) / 2, (sw.lon + ne.lon) / 2], 17);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap-bijdragers"
-    }).addTo(map);
-    L.imageOverlay(MAP_IMAGE, [
-      [sw.lat, sw.lon],
-      [ne.lat, ne.lon]
-    ], { opacity: 0.8 }).addTo(map);
-    map.fitBounds([[sw.lat, sw.lon], [ne.lat, ne.lon]]);
-    map.on("click", function (ev) {
-      var p = latLngNaarProcent(ev.latlng.lat, ev.latlng.lng);
-      if (p) verwerkKaartKlik(p.x, p.y);
-    });
-  }
-}
-
-function plaatsMarker(x, y) {
-  state.markerPos = { x: x, y: y };
-  if (modeKaart === "leaflet" && map) {
-    var ll = procentNaarLatLng(x, y);
-    if (!leafletMarker) {
-      leafletMarker = L.marker([ll.lat, ll.lng], {
-        icon: L.divIcon({
-          className: "",
-          html: '<div class="leaflet-pin"></div>',
-          iconSize: [26, 26],
-          iconAnchor: [13, 26]
-        })
-      }).addTo(map);
-    } else {
-      leafletMarker.setLatLng([ll.lat, ll.lng]);
-    }
-  } else {
-    els.marker.classList.remove("hidden");
-    els.marker.style.left = x + "%";
-    els.marker.style.top = y + "%";
-  }
-  updateLocatieInfo();
-}
-
-function verplaatsVanGps(gps) {
-  var kaartPos = null;
-  if (modeKaart === "leaflet") {
-    kaartPos = latLngNaarProcent(gps.lat, gps.lon);
-    if (!kaartPos || kaartPos.x < 0 || kaartPos.x > 100 || kaartPos.y < 0 || kaartPos.y > 100) kaartPos = null;
-  } else {
-    kaartPos = gpsNaarKaart(gps);
-  }
-if (kaartPos) {
-    plaatsMarker(kaartPos.x, kaartPos.y);
-    if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
-    toonGpsStatus("GPS-locatie vastgelegd én op de kaart gezet (nauwkeurigheid ±" + Math.round(gps.acc) + " m).", false);
-  } else {
-    toonGpsStatus("GPS-locatie vastgelegd (nauwkeurigheid ±" + Math.round(gps.acc) + " m), maar de locatie ligt buiten de kaart.", false);
-    updateLocatieInfo();
-  }
-}
-
-function muisOpKaart(e) {
-  if (modeKaart !== "afbeelding") return;
-  e.preventDefault();
-  var rect = els.kaartContainer.getBoundingClientRect();
-  var x = ((e.clientX - rect.left) / rect.width) * 100;
-  var y = ((e.clientY - rect.top) / rect.height) * 100;
-  verwerkKaartKlik(x, y);
-}
-
-function verwerkKaartKlik(x, y) {
-  plaatsMarker(x, y);
-  if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
-  updateLocatieInfo();
-  if (state.plaatsModus) {
-    var nr = prompt("Plaatsnummer van dit vak?");
-    if (nr !== null && nr.trim() !== "") {
-      plaatsenCollectie.push({ nr: Number(nr), x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
-    }
-    return;
-  }
-  if (state.kalibratieModus) {
-    vraagKalibratiePunt(x, y);
-  }
-}
+/* -------- Locatie: automatisch via GPS of handmatig plaatsnummer -------- */
 
 function updateLocatieInfo() {
   var delen = [];
   if (els.plaatsHandmatig && els.plaatsHandmatig.value.trim() !== "") {
     delen.push("Plaats " + els.plaatsHandmatig.value.trim() + " (handmatig)");
-  } else if (state.markerPos) {
-    var p = vindPlaats(state.markerPos.x, state.markerPos.y, DREMPEL_TIK);
-    if (p) delen.push("Plaats " + p.nr);
   }
   if (state.gps) {
     delen.push("GPS: " + state.gps.lat.toFixed(5) + ", " + state.gps.lon.toFixed(5));
   }
   els.locatieInfo.textContent = delen.join("  •  ");
-}
-
-/* -------- GPS: automatische locatie + koppeling aan kaart -------- */
-
-function haalGpsOp() {
-  if (!navigator.geolocation) {
-    toonGpsStatus("GPS wordt niet ondersteund door dit apparaat. Tik zelf op de kaart.", true);
-    return;
-  }
-  toonGpsStatus("Locatie ophalen...");
-  navigator.geolocation.getCurrentPosition(function (pos) {
-    state.gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy };
-    verplaatsVanGps(state.gps);
-  }, function (fout) {
-    var bericht = "GPS niet beschikbaar (";
-    if (fout.code === 1) bericht += "toestemming geweigerd";
-    else if (fout.code === 2) bericht += "geen signaal";
-    else bericht += "fout";
-    bericht += "). Tik zelf op de kaart voor je locatie.";
-    toonGpsStatus(bericht, true);
-  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
 }
 
 function toonGpsStatus(tekst, isFout) {
@@ -355,90 +135,25 @@ function toonGpsStatus(tekst, isFout) {
   els.gpsStatus.classList.toggle("waarschuwing", !!isFout);
 }
 
-/* -------- GPS <-> kaart kalibratie (minimaal 3 punten) -------- */
-
-function gpsNaarKaart(gps) {
-  var punten = (state.settings.kalibratie || []).filter(function (p) {
-    return p.x != null && p.y != null && p.lat != null && p.lon != null;
-  });
-  if (punten.length < 3) {
-    punten = (KAART_PUNTEN || []).filter(function (p) {
-      return p.x != null && p.y != null && p.lat != null && p.lon != null;
-    });
-  }
-  if (punten.length < 3) return null;
-
-  var A = [], bx = [], by = [];
-  for (var i = 0; i < punten.length; i++) {
-    var p = punten[i];
-    A.push([1, p.lat, p.lon]);
-    bx.push(p.x);
-    by.push(p.y);
-  }
-  var solx = leastSquares(A, bx);
-  var soly = leastSquares(A, by);
-  if (!solx || !soly) return null;
-
-  var x = solx[0] + solx[1] * gps.lat + solx[2] * gps.lon;
-  var y = soly[0] + soly[1] * gps.lat + soly[2] * gps.lon;
-  x = Math.max(0, Math.min(100, x));
-  y = Math.max(0, Math.min(100, y));
-  return { x: x, y: y };
-}
-
-function leastSquares(M, b) {
-  var n = M.length, d = M[0].length;
-  var ATA = [], ATb = [];
-  for (var i = 0; i < d; i++) {
-    ATA.push(new Array(d).fill(0));
-    ATb.push(0);
-  }
-  for (var i = 0; i < n; i++) {
-    for (var r = 0; r < d; r++) {
-      ATb[r] += M[i][r] * b[i];
-      for (var c = 0; c < d; c++) ATA[r][c] += M[i][r] * M[i][c];
-    }
-  }
-  try { return gauss(ATA, ATb); } catch (e) { return null; }
-}
-
-function gauss(A, b) {
-  var n = A.length;
-  for (var i = 0; i < n; i++) {
-    var max = i;
-    for (var r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[max][i])) max = r;
-    if (Math.abs(A[max][i]) < 1e-12) throw new Error("singulier");
-    var tmp = A[i]; A[i] = A[max]; A[max] = tmp;
-    var tb = b[i]; b[i] = b[max]; b[max] = tb;
-    var div = A[i][i];
-    for (var c = 0; c < n; c++) A[i][c] /= div;
-    b[i] /= div;
-    for (var r = 0; r < n; r++) {
-      if (r === i) continue;
-      var f = A[r][i];
-      for (var c = 0; c < n; c++) A[r][c] -= f * A[i][c];
-      b[r] -= f * b[i];
-    }
-  }
-  return b;
-}
-
-/* Kalibratiemodus */
-function vraagKalibratiePunt(x, y) {
-  var lat = prompt("GPS-breedtegraad (lat) van dit kaartpunt? Bijv. 52.1234");
-  if (lat === null) return;
-  var lon = prompt("GPS-lengtegraad (lon) van dit kaartpunt? Bijv. 5.6789");
-  if (lon === null) return;
-  lat = parseFloat(lat.replace(",", "."));
-  lon = parseFloat(lon.replace(",", "."));
-  if (isNaN(lat) || isNaN(lon)) {
-    alert("Ongeldige coördinaten. Punt niet toegevoegd.");
+function haalGpsOp() {
+  if (!navigator.geolocation) {
+    toonGpsStatus("GPS wordt niet ondersteund door dit apparaat. Vul het plaatsnummer handmatig in.", true);
     return;
   }
-  if (!state.settings.kalibratie) state.settings.kalibratie = [];
-  state.settings.kalibratie.push({ x: x, y: y, lat: lat, lon: lon });
-  saveSettings();
-  alert("Kalibratiepunt opgeslagen (" + state.settings.kalibratie.length + " punten). Minimaal 3 nodig voor automatische koppeling.");
+  toonGpsStatus("Locatie ophalen...");
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    state.gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy };
+    if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
+    toonGpsStatus("GPS-locatie vastgelegd (nauwkeurigheid ±" + Math.round(pos.coords.accuracy) + " m).", false);
+    updateLocatieInfo();
+  }, function (fout) {
+    var bericht = "GPS niet beschikbaar (";
+    if (fout.code === 1) bericht += "toestemming geweigerd";
+    else if (fout.code === 2) bericht += "geen signaal";
+    else bericht += "fout";
+    bericht += "). Vul het plaatsnummer handmatig in.";
+    toonGpsStatus(bericht, true);
+  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
 }
 
 /* -------- Formulier -------- */
@@ -542,7 +257,7 @@ function bouwEntries() {
   if (!datum) { foutMelding("Kies een datum."); return null; }
   if (regels.length === 0) { foutMelding("Vul minstens een vissoort met aantal in."); return null; }
 
-var handmatig = els.plaatsHandmatig ? els.plaatsHandmatig.value.trim() : "";
+  var handmatig = els.plaatsHandmatig ? els.plaatsHandmatig.value.trim() : "";
   var plaats = "";
   if (handmatig !== "") {
     var nrHand = Number(handmatig);
@@ -551,9 +266,6 @@ var handmatig = els.plaatsHandmatig ? els.plaatsHandmatig.value.trim() : "";
       return null;
     }
     plaats = nrHand;
-  } else if (state.markerPos) {
-    var gevonden = vindPlaats(state.markerPos.x, state.markerPos.y, DREMPEL_TIK);
-    if (gevonden) plaats = gevonden.nr;
   }
 
   var sessieId = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
@@ -566,8 +278,8 @@ var handmatig = els.plaatsHandmatig ? els.plaatsHandmatig.value.trim() : "";
       aantal: r.aantal,
       gps_lat: state.gps ? state.gps.lat : "",
       gps_lon: state.gps ? state.gps.lon : "",
-      kaart_x: state.markerPos ? Math.round(state.markerPos.x * 10) / 10 : "",
-      kaart_y: state.markerPos ? Math.round(state.markerPos.y * 10) / 10 : "",
+      kaart_x: "",
+      kaart_y: "",
       plaats: plaats,
       visser: visser,
       opmerking: opmerking,
@@ -594,11 +306,8 @@ function resetForm() {
   updateVerwijderKnoppen();
   els.visser.value = "";
   els.opmerking.value = "";
-  state.markerPos = null;
   state.gps = null;
-  if (leafletMarker && map) { map.removeLayer(leafletMarker); leafletMarker = null; }
-  els.marker.classList.add("hidden");
-els.gpsStatus.classList.add("hidden");
+  els.gpsStatus.classList.add("hidden");
   els.gpsStatus.textContent = "";
   if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
   updateLocatieInfo();
@@ -758,7 +467,7 @@ function automatischeSync() {
   var teDoen = state.entries.filter(function (e) { return !e.synced; });
   if (teDoen.length === 0) return;
   var melding = "Bezig met automatisch versturen van " + teDoen.length + " registratie(s)...";
-if (state.entries.length > 0) els.syncStatus.textContent = melding;
+  if (state.entries.length > 0) els.syncStatus.textContent = melding;
   groepeerOpSessie(teDoen).forEach(verstuurEntries);
   setTimeout(function () {
     var rest = state.entries.filter(function (x) { return !x.synced; }).length;
@@ -774,7 +483,7 @@ els.syncBtn.addEventListener("click", function () {
   if (!backendUrl()) { els.syncStatus.textContent = "De vereniging heeft nog geen centrale opslag ingesteld. Registraties blijven op dit toestel. Gebruik Exporteren om de gegevens door te sturen."; return; }
   var teDoen = state.entries.filter(function (e) { return !e.synced; });
   if (teDoen.length === 0) { els.syncStatus.textContent = "Alles is al gesynchroniseerd."; return; }
-els.syncStatus.textContent = "Opnieuw versturen van " + teDoen.length + " registratie(s)...";
+  els.syncStatus.textContent = "Opnieuw versturen van " + teDoen.length + " registratie(s)...";
   groepeerOpSessie(teDoen).forEach(verstuurEntries);
   setTimeout(function () {
     var rest = state.entries.filter(function (x) { return !x.synced; }).length;
@@ -782,57 +491,34 @@ els.syncStatus.textContent = "Opnieuw versturen van " + teDoen.length + " regist
   }, teDoen.length * 400 + 3000);
 });
 
-/* -------- GPS & kaart events -------- */
+/* -------- GPS & locatie-events -------- */
 
 els.gpsBtn.addEventListener("click", haalGpsOp);
 els.plaatsHandmatig.addEventListener("input", function () {
   var v = els.plaatsHandmatig.value.trim();
-  if (v === "") { updateLocatieInfo(); return; }
+  if (v === "") {
+    toonGpsStatus("", false);
+    updateLocatieInfo();
+    return;
+  }
   var nr = Number(v);
-  var punt = kaartPosUitPlaats(nr);
-  if (punt) {
+  if (plaatsBestaat(nr)) {
     toonGpsStatus("Plaats " + nr + " handmatig gekozen.", false);
-    plaatsMarker(punt.x, punt.y);
   } else {
     toonGpsStatus("Plaatsnummer " + v + " bestaat niet (kies een geldig nummer).", true);
-    updateLocatieInfo();
   }
+  updateLocatieInfo();
 });
 els.gpsResetBtn.addEventListener("click", function () {
   state.gps = null;
-  state.markerPos = null;
   if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
-  if (leafletMarker && map) { map.removeLayer(leafletMarker); leafletMarker = null; }
-  els.marker.classList.add("hidden");
   els.gpsStatus.classList.add("hidden");
   els.gpsStatus.textContent = "";
   updateLocatieInfo();
 });
-els.kaartContainer.addEventListener("click", muisOpKaart);
-els.kaartContainer.addEventListener("touchend", function (e) {
-  if (modeKaart !== "afbeelding") return;
-  var touch = e.changedTouches[0];
-  if (!touch) return;
-  var rect = els.kaartContainer.getBoundingClientRect();
-  verwerkKaartKlik(((touch.clientX - rect.left) / rect.width) * 100, ((touch.clientY - rect.top) / rect.height) * 100);
-});
 
 /* -------- Start -------- */
 
-var plaatsenCollectie = [];
-window.plaatsenHulp = function () {
-  state.plaatsModus = !state.plaatsModus;
-  if (state.plaatsModus) {
-    alert("Plaatsen-modus AAN: klik nu op de kaart op elk genummerd vak en voer het nummer in. Roep daarna plaatsenHulp() nogmaals aan om de lijst te krijgen.");
-  } else {
-    console.log("=== PLAATSEN voor app.js (kopieer dit) ===");
-    console.log(JSON.stringify(plaatsenCollectie));
-    plaatsenCollectie = [];
-    alert("Klaar! Kopieer de PLAATSEN-lijst uit de console (F12) en stuur hem aan de beheerder. De lijst is nu gewist.");
-  }
-};
-
-initKaart();
 initDatum();
 maakSoortRegel();
 toonLijst();
