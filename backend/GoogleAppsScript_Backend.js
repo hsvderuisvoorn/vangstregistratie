@@ -40,34 +40,6 @@ function doGet() {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
-/* ---------- wekelijkse herinnering (1x per week) ---------- */
-
-function stuurWeekHerinnering() {
-  var ontvanger = "jpgpthijssen@gmail.com";
-  var body = "Vergeet niet de gegevens van de hengelvangstregistratie te verversen.\n\n" +
-    "App: https://hsvderuisvoorn.github.io/vangstregistratie/";
-  MailApp.sendEmail(ontvanger, "Hengelvangstregistratie - wekelijkse herinnering", body);
-}
-
-function zetWeekHerinneringAan() {
-  // bestaande triggers vooraf opruimen om geen dubbelen te krijgen
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === "stuurWeekHerinnering") ScriptApp.deleteTrigger(t);
-  });
-  ScriptApp.newTrigger("stuurWeekHerinnering")
-    .timeBased()
-    .atHour(9)
-    .everyWeeks(1)
-    .onWeekDay(ScriptApp.WeekDay.MONDAY)
-    .create();
-}
-
-function zetWeekHerinneringUit() {
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === "stuurWeekHerinnering") ScriptApp.deleteTrigger(t);
-  });
-}
-
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
