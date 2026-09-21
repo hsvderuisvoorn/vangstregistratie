@@ -9,7 +9,11 @@
  *  "Web-app-URL" bekijken). De /exec-link blijft gelijk.
  *
  *  INSTALLATIE (eenmalig, door de vereniging):
- *  1. Ga naar https://sheets.new  (maakt een nieuwe Google spreadsheet)
+ *  1. Open de map "Vangstregistratie" in de Drive van het
+ *     Workspace-account (paul@hsvderuisvoorn.nl) en klik daar op
+ *     Nieuwe spreadsheet (of maak bij https://sheets.new een nieuwe
+ *     spreadsheet en sleep hem daarna naar die map, zodat hij op de
+ *     workspace-drive staat en niet op een persoonlijke drive).
  *  2. Geef de spreadsheet een naam, bijv. "Hengelvangst registratie"
  *  3. Klik in het menu: Extensies > Apps Script
  *  4. Wis de eventuele bestaande code en plak dit hele bestand erin
@@ -40,6 +44,31 @@ function doGet() {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
+/* ------------------------------------------------------------
+ *  Werksheet hosten op de Drive van de vereniging (paul@hsvderuisvoorn.nl)
+ *  zodat de gegevens op de workspace-drive staan en niet op een
+ *  persoonlijke drive. Als er een map "Vangstregistratie" bestaat op
+ *  die account-drive, wordt de spreadheet daar automatisch naartoe
+ *  verplaatst.
+ * ------------------------------------------------------------ */
+function verplaatsNaarWerkmapOpVerenigingsDrive(ss) {
+  try {
+    var zoekt = DriveApp.getFoldersByName("Vangstregistratie");
+    if (!zoekt.hasNext()) return; // map niet aanwezig -> niets doen
+    var werkmap = zoekt.next();
+
+    var bestand = DriveApp.getFileById(ss.getId());
+    var vaderIter = bestand.getParents();
+    while (vaderIter.hasNext()) {
+      var vader = vaderIter.next();
+      if (vader.getId() === werkmap.getId()) return; // staat er al in
+    }
+    bestand.moveTo(werkmap);
+  } catch (err) {
+    // stille fout: werken blijft, alleen verplaatsen slaat eventueel over
+  }
+}
+
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -47,6 +76,7 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    verplaatsNaarWerkmapOpVerenigingsDrive(ss);
     var sheet = ss.getSheetByName("Vangsten");
 
     if (!sheet) {
