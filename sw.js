@@ -1,17 +1,17 @@
-var CACHE_NAME = "vangstregister-v28";
-var BESTanden = [
+var CACHE_NAME = "vangstregister-v29";
+var BESTANDEN = [
   "./index.html",
   "./style.css",
   "./app.js",
   "./manifest.json",
-  "./vijverkaart.svg"
+  "./vijverkaart.jpg"
 ];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(
     caches.open(CACHE_NAME).then(function (cache) {
       return Promise.all(
-        BESTanden.map(function (url) {
+        BESTANDEN.map(function (url) {
           return cache.add(url).catch(function () {});
         })
       );

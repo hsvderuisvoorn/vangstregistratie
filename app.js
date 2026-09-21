@@ -458,8 +458,15 @@ function datumNl(iso) {
 }
 
 function soortenIcon(soort) {
-  var map = { Snoek: "🐊", Karper: "🐟", Baars: "🐟", Paling: "🐍", Meerval: "🐋", Brasem: "🐟", Zeelt: "🐟" };
-  return map[soort] ? map[soort] : "🐠";
+  var s = String(soort || "").toLowerCase();
+  if (s.indexOf("snoek") !== -1) return "🐊";
+  if (s.indexOf("paling") !== -1) return "🐍";
+  if (s.indexOf("meerval") !== -1) return "🐋";
+  if (s.indexOf("brasem") !== -1) return "🐟";
+  if (s.indexOf("baars") !== -1 || s.indexOf("zonnebaars") !== -1) return "🐟";
+  if (s.indexOf("karper") !== -1) return "🐠";
+  if (s.indexOf("zeelt") !== -1) return "🐟";
+  return "🐠";
 }
 
 function esc(tekst) {
