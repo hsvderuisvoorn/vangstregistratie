@@ -9,7 +9,7 @@ var ENTRIES_KEY = "vangst_entries";
  * Zet de URL tussen de aanhalingstekens, bijv.:
  *   var BACKEND_URL = "https://script.google.com/macros/s/AKfyc.../exec";
  */
-var BACKEND_URL = "https://script.google.com/macros/s/AKfycbx2-1yCY2MvQcPG7R6XDkeMrK7IwcY3LfRCbHu5hMQ9xuR1nmUNy5Cvg-a8p24vJbg/exec";
+var BACKEND_URL = "https://script.google.com/macros/s/AKfycbz1C-XOXABqTEbBL1iKE_Wpa54YqLtqY5Pnq5753nrLRswtjgs3GL2_7ZLqnZWC8E9T/exec";
 
 /* ===== PLAATSEN OP DE VIJVERKAART =====
  * Genummerde visvakken zoals op de plattegrond.
