@@ -10,7 +10,7 @@
    - Verzamelt alle vangstregels die in de afgelopen 24 uur zijn
      ingezonden (kolom "Ingestuurd_op").
    - Alleen als er registraties zijn: een overzicht-mail naar
-     paul@hsvderuisvoorn.nl met de sheetlink erbij.
+     secretariaat@hsvderuisvoorn.nl met de sheetlink erbij.
    - Zet in kolom "Dagoverzicht gemeld" een "ja", zodat elke
      regel maar één keer in een dagoverzicht terechtkomt.
 
@@ -27,7 +27,7 @@
    6. Klaar: elke dag om ~20:00 komt de samenvatting.
    ============================================================ */
 
-var ONTVANGER = "paul@hsvderuisvoorn.nl";
+var ONTVANGER = "secretariaat@hsvderuisvoorn.nl";
 var SHEETNAAM = "Vangstenregistratie";
 var GEMELD_KOLOM = "Dagoverzicht gemeld";
 var VENSTER_UREN = 24;
