@@ -263,6 +263,7 @@ function bouwEntries() {
   var regels = leesSoortRegels().filter(function (r) { return r.soort && r.aantal; });
 
   if (!datum) { foutMelding("Kies een datum."); return null; }
+  if (!visser) { foutMelding("Vul de naam van de visser in."); return null; }
   if (regels.length === 0) { foutMelding("Vul minstens een vissoort met aantal in."); return null; }
 
   var handmatig = els.plaatsHandmatig ? els.plaatsHandmatig.value.trim() : "";
