@@ -39,17 +39,20 @@
       <p id="locatieInfo" class="locatie-info"></p>
     </section>
 
+    <section id="visserSectie" class="card">
+      <h2>2. Naam visser <span class="verplicht-tag">verplicht</span></h2>
+      <label for="visser">Naam van de visser</label>
+      <input type="text" id="visser" placeholder="Naam van de visser" required autocomplete="name">
+    </section>
+
     <section id="formSectie" class="card">
-      <h2>2. Wat heb je gevangen?</h2>
+      <h2>3. Wat heb je gevangen?</h2>
 
       <label for="datum">Datum</label>
       <input type="date" id="datum" required>
 
       <div id="soortRegels"></div>
       <button id="voegSoortBtn" type="button" class="btn-secondary">＋ Nog een soort toevoegen</button>
-
-      <label for="visser">Visser</label>
-      <input type="text" id="visser" placeholder="Naam van de visser" required autocomplete="name">
 
       <label for="opmerking">Opmerking <small>(optioneel)</small></label>
       <input type="text" id="opmerking" placeholder="Bijv. roofblei van 2 kg, gevangen op dropshot">
@@ -60,7 +63,7 @@
     </section>
 
     <section id="lijstSectie" class="card hidden">
-      <h2>3. Mijn recente registraties</h2>
+      <h2>4. Mijn recente registraties</h2>
       <ul id="registratieLijst"></ul>
       <div class="btn-row">
         <button id="exportBtn" type="button">⬇ Exporteren (JSON)</button>
