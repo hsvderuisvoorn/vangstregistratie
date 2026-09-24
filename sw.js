@@ -1,10 +1,11 @@
-var CACHE_NAME = "vangstregister-v32";
+var CACHE_NAME = "vangstregister-v33";
 var BESTANDEN = [
   "./index.html",
   "./style.css",
   "./app.js",
   "./manifest.json",
-  "./vijverkaart.jpg"
+  "./vijverkaart.jpg",
+  "./logo.png"
 ];
 
 self.addEventListener("install", function (e) {
