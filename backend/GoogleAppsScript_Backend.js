@@ -445,29 +445,48 @@ function bouwJaaroverzicht() {
     ]);
   }
 
-  var grafiekRij = 4;
-  var grafiekHoogtePx = 240;
-  var rijHoogtes = tab.getRowHeights(grafiekRij, 80);
-  var hoogteSamen = 0;
-  var laatsteGrafiekRij = grafiekRij;
-  for (var hi = 0; hi < rijHoogtes.length; hi++) {
-    hoogteSamen += rijHoogtes[hi];
-    laatsteGrafiekRij = grafiekRij + hi;
-    if (hoogteSamen >= grafiekHoogtePx) break;
-  }
-  var tafelRij = laatsteGrafiekRij + 2;
   var soorten = Object.keys(soortenSet).sort();
+  var plaatsNrs = Object.keys(perPlaats).sort(function (a, b) { return Number(a) - Number(b); });
 
+  var mini = 4;
+  var miniSoortRijen = soorten.length + 1;
+  var miniPlaatsRijen = plaatsNrs.length + 1;
+  var breedsteMini = Math.max(miniSoortRijen, miniPlaatsRijen);
+
+  /* mini-tabellen bovenaan */
   if (soorten.length) {
     var rijen = [["Soort", "Aantal"]];
     for (var si = 0; si < soorten.length; si++) rijen.push([soorten[si], perSoort[soorten[si]]]);
-    tab.getRange(tafelRij, 1).setValue("Totaal per vissoort (" + keuze + ")");
-    tab.getRange(tafelRij, 1).setFontWeight("bold");
-    var dataRngA = tab.getRange(tafelRij + 1, 1, rijen.length, 2);
-    dataRngA.setValues(rijen);
+    tab.getRange(mini, 1).setValue("Totaal per vissoort (" + keuze + ")");
+    tab.getRange(mini, 1).setFontWeight("bold");
+    tab.getRange(mini + 1, 1, rijen.length, 2).setValues(rijen);
+  }
+  if (plaatsNrs.length) {
+    var rijenP = [["Plaats", "Aantal"]];
+    for (var pi = 0; pi < plaatsNrs.length; pi++) rijenP.push([plaatsNrs[pi], perPlaats[plaatsNrs[pi]]]);
+    tab.getRange(mini, 4).setValue("Totaal per plaats (" + keuze + ")");
+    tab.getRange(mini, 4).setFontWeight("bold");
+    tab.getRange(mini + 1, 4, rijenP.length, 2).setValues(rijenP);
+  }
+
+  /* hoofdtabel eronder */
+  var tabelStart = mini + breedsteMini + 2;
+  tab.getRange(tabelStart, 1, 1, 6)
+    .setValues([["Datum", "Soort", "Aantal", "Visser", "Plaats", "Opmerking"]])
+    .setFontWeight("bold");
+  if (tabelRijen.length) {
+    tab.getRange(tabelStart + 1, 1, tabelRijen.length, 6).setValues(tabelRijen);
+  } else {
+    tab.getRange(tabelStart + 1, 1).setValue("Geen vangsten in " + keuze);
+  }
+  var tabelEinde = tabelStart + (tabelRijen.length ? tabelRijen.length : 1);
+
+  /* grafieken ONDERAAN, onder alle tabellen: ze kunnen nooit tekst bedekken */
+  var grafiekRij = tabelEinde + 2;
+  if (soorten.length) {
     tab.insertChart(tab.newChart()
       .setChartType(Charts.ChartType.COLUMN)
-      .addRange(dataRngA)
+      .addRange(tab.getRange(mini + 1, 1, soorten.length + 1, 2))
       .setNumHeaders(1)
       .setOption("title", "Aantal per vissoort (" + keuze + ")")
       .setOption("legend", { position: "none" })
@@ -477,18 +496,10 @@ function bouwJaaroverzicht() {
       .setPosition(grafiekRij, 1, 0, 0)
       .build());
   }
-
-  var plaatsNrs = Object.keys(perPlaats).sort(function (a, b) { return Number(a) - Number(b); });
   if (plaatsNrs.length) {
-    var rijenP = [["Plaats", "Aantal"]];
-    for (var pi = 0; pi < plaatsNrs.length; pi++) rijenP.push([plaatsNrs[pi], perPlaats[plaatsNrs[pi]]]);
-    tab.getRange(tafelRij, 4).setValue("Totaal per plaats (" + keuze + ")");
-    tab.getRange(tafelRij, 4).setFontWeight("bold");
-    var dataRngP = tab.getRange(tafelRij + 1, 4, rijenP.length, 2);
-    dataRngP.setValues(rijenP);
     tab.insertChart(tab.newChart()
       .setChartType(Charts.ChartType.COLUMN)
-      .addRange(dataRngP)
+      .addRange(tab.getRange(mini + 1, 4, plaatsNrs.length + 1, 2))
       .setNumHeaders(1)
       .setOption("title", "Totaal per plaats (" + keuze + ")")
       .setOption("legend", { position: "none" })
@@ -497,17 +508,6 @@ function bouwJaaroverzicht() {
       .setOption("height", 240)
       .setPosition(grafiekRij, 10, 0, 0)
       .build());
-  }
-
-  var langsteTabel = Math.max(soorten.length, plaatsNrs.length) + 1;
-  var tabelStart = tafelRij + langsteTabel + 3;
-  tab.getRange(tabelStart, 1, 1, 6)
-    .setValues([["Datum", "Soort", "Aantal", "Visser", "Plaats", "Opmerking"]])
-    .setFontWeight("bold");
-  if (tabelRijen.length) {
-    tab.getRange(tabelStart + 1, 1, tabelRijen.length, 6).setValues(tabelRijen);
-  } else {
-    tab.getRange(tabelStart + 1, 1).setValue("Geen vangsten in " + keuze);
   }
 }
 
