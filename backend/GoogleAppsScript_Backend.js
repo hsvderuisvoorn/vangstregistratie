@@ -445,15 +445,16 @@ function bouwJaaroverzicht() {
     ]);
   }
 
-  var start = 6;
+  var grafiekRij = 4;
+  var tafelRij = 18;
   var soorten = Object.keys(soortenSet).sort();
 
   if (soorten.length) {
-    tab.getRange("A4").setValue("Totaal per vissoort (" + keuze + ")");
-    tab.getRange("A4").setFontWeight("bold");
     var rijen = [["Soort", "Aantal"]];
     for (var si = 0; si < soorten.length; si++) rijen.push([soorten[si], perSoort[soorten[si]]]);
-    var dataRngA = tab.getRange(start, 1, rijen.length, 2);
+    tab.getRange(tafelRij, 1).setValue("Totaal per vissoort (" + keuze + ")");
+    tab.getRange(tafelRij, 1).setFontWeight("bold");
+    var dataRngA = tab.getRange(tafelRij + 1, 1, rijen.length, 2);
     dataRngA.setValues(rijen);
     tab.insertChart(tab.newChart()
       .setChartType(Charts.ChartType.COLUMN)
@@ -462,19 +463,19 @@ function bouwJaaroverzicht() {
       .setOption("title", "Aantal per vissoort (" + keuze + ")")
       .setOption("legend", { position: "none" })
       .setOption("colors", kleurenVoor(soorten))
-      .setOption("width", 400)
+      .setOption("width", 440)
       .setOption("height", 240)
-      .setPosition(start - 1, 4, 0, 0)
+      .setPosition(grafiekRij, 1, 0, 0)
       .build());
   }
 
   var plaatsNrs = Object.keys(perPlaats).sort(function (a, b) { return Number(a) - Number(b); });
   if (plaatsNrs.length) {
-    tab.getRange("F4").setValue("Totaal per plaats (" + keuze + ")");
-    tab.getRange("F4").setFontWeight("bold");
     var rijenP = [["Plaats", "Aantal"]];
     for (var pi = 0; pi < plaatsNrs.length; pi++) rijenP.push([plaatsNrs[pi], perPlaats[plaatsNrs[pi]]]);
-    var dataRngP = tab.getRange(start, 6, rijenP.length, 2);
+    tab.getRange(tafelRij, 4).setValue("Totaal per plaats (" + keuze + ")");
+    tab.getRange(tafelRij, 4).setFontWeight("bold");
+    var dataRngP = tab.getRange(tafelRij + 1, 4, rijenP.length, 2);
     dataRngP.setValues(rijenP);
     tab.insertChart(tab.newChart()
       .setChartType(Charts.ChartType.COLUMN)
@@ -485,11 +486,12 @@ function bouwJaaroverzicht() {
       .setOption("colors", ["#2E7D32"])
       .setOption("width", 460)
       .setOption("height", 240)
-      .setPosition(start - 1, 9, 0, 0)
+      .setPosition(grafiekRij, 10, 0, 0)
       .build());
   }
 
-  var tabelStart = start + soorten.length + 3;
+  var langsteTabel = Math.max(soorten.length, plaatsNrs.length) + 1;
+  var tabelStart = tafelRij + langsteTabel + 3;
   tab.getRange(tabelStart, 1, 1, 6)
     .setValues([["Datum", "Soort", "Aantal", "Visser", "Plaats", "Opmerking"]])
     .setFontWeight("bold");
