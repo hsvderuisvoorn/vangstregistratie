@@ -485,13 +485,14 @@ function bouwJaaroverzicht() {
   var eersteGrafiekRij = 4;
   var opgeteld = 0;
   var eindeEerste = eersteGrafiekRij;
-  var rijhoogtes = tab.getRowHeights(eersteGrafiekRij, 80);
-  for (var hi = 0; hi < rijhoogtes.length; hi++) {
-    opgeteld += rijhoogtes[hi];
-    eindeEerste = eersteGrafiekRij + hi;
+  for (var hi = eersteGrafiekRij; hi < eersteGrafiekRij + 80; hi++) {
+    var rijHoogte = tab.getRowHeight(hi);
+    if (!rijHoogte || rijHoogte <= 0) rijHoogte = 21;
+    opgeteld += rijHoogte;
+    eindeEerste = hi;
     if (opgeteld >= 240) break;
   }
-  var tweedeGrafiekRij = eindeEerste + 1;
+  var tweedeGrafiekRij = eindeEerste + 2;
 
   if (soorten.length) {
     tab.insertChart(tab.newChart()
