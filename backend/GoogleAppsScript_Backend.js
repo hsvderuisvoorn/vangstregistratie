@@ -481,8 +481,18 @@ function bouwJaaroverzicht() {
   }
   var tabelEinde = tabelStart + (tabelRijen.length ? tabelRijen.length : 1);
 
-  /* grafieken ONDERAAN, onder alle tabellen: ze kunnen nooit tekst bedekken */
-  var grafiekRij = tabelEinde + 2;
+  /* grafieken RECHTS bovenaan, beginnend bij kolom I (9), onder elkaar */
+  var eersteGrafiekRij = 4;
+  var opgeteld = 0;
+  var eindeEerste = eersteGrafiekRij;
+  var rijhoogtes = tab.getRowHeights(eersteGrafiekRij, 80);
+  for (var hi = 0; hi < rijhoogtes.length; hi++) {
+    opgeteld += rijhoogtes[hi];
+    eindeEerste = eersteGrafiekRij + hi;
+    if (opgeteld >= 240) break;
+  }
+  var tweedeGrafiekRij = eindeEerste + 1;
+
   if (soorten.length) {
     tab.insertChart(tab.newChart()
       .setChartType(Charts.ChartType.COLUMN)
@@ -491,9 +501,9 @@ function bouwJaaroverzicht() {
       .setOption("title", "Aantal per vissoort (" + keuze + ")")
       .setOption("legend", { position: "none" })
       .setOption("colors", kleurenVoor(soorten))
-      .setOption("width", 440)
+      .setOption("width", 460)
       .setOption("height", 240)
-      .setPosition(grafiekRij, 1, 0, 0)
+      .setPosition(eersteGrafiekRij, 9, 0, 0)
       .build());
   }
   if (plaatsNrs.length) {
@@ -506,7 +516,7 @@ function bouwJaaroverzicht() {
       .setOption("colors", ["#2E7D32"])
       .setOption("width", 460)
       .setOption("height", 240)
-      .setPosition(grafiekRij, 10, 0, 0)
+      .setPosition(tweedeGrafiekRij, 9, 0, 0)
       .build());
   }
 }
