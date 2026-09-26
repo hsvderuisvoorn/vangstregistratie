@@ -87,7 +87,7 @@ function saveEntries() {
 }
 
 /* Verschillende benoemde elementen */
-var SOORTEN = ["Voorn","Brasem","Baars","Spiegelkarper","Schubkarper","Graskarper","F1 (kruis-kroeskarper)","Bliek","Zeelt","Posje","Grondel","Zonnebaars","Snoek","Overig..."];
+var SOORTEN = ["Voorn","Brasem","Baars","Spiegelkarper","Schubkarper","Graskarper","F1 (kruis-kroeskarper)","Bliek","Vetje","Zeelt","Posje","Grondel","Zonnebaars","Snoek","Overig..."];
 var els = {
   datum: document.getElementById("datum"),
   soortRegels: document.getElementById("soortRegels"),

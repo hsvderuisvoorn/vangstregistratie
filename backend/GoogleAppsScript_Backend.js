@@ -330,21 +330,22 @@ function waardeVoorKol(kop, data, plaatsOpGps) {
  * ============================================================ */
 
 var KLEUR_PER_SOORT = {
-  "Voorn": "#F9A825",
-  "Brasem": "#1565C0",
-  "Spiegelkarper": "#2E7D32",
-  "Schubkarper": "#795548",
-  "Graskarper": "#7CB342",
+  "Voorn": "#E53935",
+  "Brasem": "#1E88E5",
+  "Spiegelkarper": "#43A047",
+  "Schubkarper": "#6D4C41",
+  "Graskarper": "#C0CA33",
   "F1 (kruis-kroeskarper)": "#00897B",
   "Bliek": "#90A4AE",
-  "Zeelt": "#9E9D24",
-  "Posje": "#BCAAA4",
-  "Grondel": "#5D4037",
-  "Zonnebaars": "#29B6F6",
-  "Snoek": "#C62828",
-  "Meerval": "#4E342E",
-  "Paling": "#33691E",
+  "Zeelt": "#F9A825",
+  "Posje": "#EC407A",
+  "Grondel": "#F4511E",
+  "Zonnebaars": "#26C6DA",
+  "Snoek": "#2E7D32",
+  "Meerval": "#455A64",
+  "Paling": "#AD1457",
   "Baars": "#8E24AA",
+  "Vetje": "#FF8F00",
   "Overig...": "#BDBDBD"
 };
 

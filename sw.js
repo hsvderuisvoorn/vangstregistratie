@@ -1,4 +1,4 @@
-var CACHE_NAME = "vangstregister-v36";
+var CACHE_NAME = "vangstregister-v37";
 var BESTANDEN = [
   "./index.html",
   "./style.css",
