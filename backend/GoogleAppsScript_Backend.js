@@ -344,7 +344,7 @@ var KLEUR_PER_SOORT = {
   "Snoek": "#C62828",
   "Meerval": "#4E342E",
   "Paling": "#33691E",
-  "Baars": "#FB8C00",
+  "Baars": "#8E24AA",
   "Overig...": "#BDBDBD"
 };
 
