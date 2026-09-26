@@ -68,7 +68,8 @@ function plaatsBestaat(nr) {
 var state = {
   settings: loadSettings(),
   entries: loadEntries(),
-  gps: null
+  gps: null,
+  gpsFout: false
 };
 
 function loadSettings() {
@@ -138,6 +139,12 @@ function toonGpsStatus(tekst, isFout, isOk) {
   els.gpsStatus.classList.toggle("ok", !!isOk);
 }
 
+function zetPlaatsVerplicht(verplicht) {
+  var tag = document.getElementById("plaatsVerplicht");
+  if (tag) tag.classList.toggle("hidden", !verplicht);
+  if (els.plaatsHandmatig) els.plaatsHandmatig.classList.toggle("verplicht", !!verplicht);
+}
+
 function toonLocatieMelding(tekst) {
   var el = document.getElementById("locatieMelding");
   if (!el) return;
@@ -153,6 +160,8 @@ function haalGpsOp() {
 toonGpsStatus("Locatie ophalen...", false);
     navigator.geolocation.getCurrentPosition(function (pos) {
     state.gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: Math.round(pos.coords.accuracy) };
+    state.gpsFout = false;
+    zetPlaatsVerplicht(false);
     if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
     toonGpsStatus("✅ GPS-locatie vastgelegd (±" + state.gps.acc + " m)", false, true);
     toonLocatieMelding("");
@@ -164,6 +173,10 @@ toonGpsStatus("Locatie ophalen...", false);
     else bericht += "fout";
     bericht += "). Vul het plaatsnummer handmatig in.";
     toonGpsStatus(bericht, true);
+    state.gps = null;
+    state.gpsFout = true;
+    zetPlaatsVerplicht(true);
+    updateLocatieInfo();
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
 }
 
@@ -272,8 +285,14 @@ function bouwEntries() {
   var handmatig = els.plaatsHandmatig ? els.plaatsHandmatig.value.trim() : "";
   var heeftGps = !!state.gps;
   if (handmatig === "" && !heeftGps) {
-    foutMelding("Kies eerst je locatie: druk op de GPS-knop of vul een plaatsnummer in.");
-    toonLocatieMelding("Geen locatie gekozen. Kies de GPS-knop of vul een plaatsnummer in.");
+    if (state.gpsFout) {
+      foutMelding("GPS werkt niet op dit apparaat. Vul verplicht een plaatsnummer in.");
+      toonLocatieMelding("GPS werkt niet. Plaatsnummer is verplicht.");
+      toonGpsStatus("Plaatsnummer invullen is verplicht (GPS faalt).", true);
+    } else {
+      foutMelding("Kies eerst je locatie: druk op de GPS-knop of vul een plaatsnummer in.");
+      toonLocatieMelding("Geen locatie gekozen. Kies de GPS-knop of vul een plaatsnummer in.");
+    }
     return null;
   }
   var plaats = "";
@@ -327,6 +346,8 @@ function resetForm() {
   els.visser.value = "";
   els.opmerking.value = "";
   state.gps = null;
+  state.gpsFout = false;
+  zetPlaatsVerplicht(false);
   els.gpsStatus.classList.add("hidden");
   els.gpsStatus.classList.remove("ok");
   els.gpsStatus.textContent = "";
@@ -528,13 +549,15 @@ els.plaatsHandmatig.addEventListener("input", function () {
   var v = els.plaatsHandmatig.value.trim();
   if (v === "") {
     toonGpsStatus("", false);
+    zetPlaatsVerplicht(state.gpsFout);
     updateLocatieInfo();
     return;
   }
   var nr = Number(v);
   if (plaatsBestaat(nr)) {
-    toonGpsStatus("Plaats " + nr + " handmatig gekozen.", false);
+    toonGpsStatus("Plaats " + nr + " handmatig gekozen.", state.gpsFout);
     toonLocatieMelding("");
+    zetPlaatsVerplicht(false);
   } else {
     toonGpsStatus("Plaatsnummer " + v + " bestaat niet (kies een geldig nummer).", true);
     toonLocatieMelding("Plaatsnummer " + v + " bestaat niet.");
@@ -543,6 +566,8 @@ els.plaatsHandmatig.addEventListener("input", function () {
 });
 els.gpsResetBtn.addEventListener("click", function () {
   state.gps = null;
+  state.gpsFout = false;
+  zetPlaatsVerplicht(false);
   if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
   els.gpsStatus.classList.add("hidden");
   els.gpsStatus.textContent = "";

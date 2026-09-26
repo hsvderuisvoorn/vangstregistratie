@@ -34,7 +34,7 @@
         <button id="gpsBtn" type="button">📍 Automatische GPS-locatie</button>
         <button id="gpsResetBtn" type="button" class="btn-secondary">↺ Wissen</button>
       </div>
-      <label for="plaatsHandmatig">Plaatsnummer <small>(handmatig invullen als GPS niet lukt, of thuis invullen)</small></label>
+      <label for="plaatsHandmatig">Plaatsnummer <span id="plaatsVerplicht" class="verplicht-tag hidden">verplicht</span> <small>(handmatig invullen als GPS niet lukt, of thuis invullen)</small></label>
       <input type="number" id="plaatsHandmatig" min="1" max="55" inputmode="numeric" placeholder="Bijv. 12">
       <p id="locatieMelding" class="locatie-melding hidden"></p>
       <p id="locatieInfo" class="locatie-info"></p>

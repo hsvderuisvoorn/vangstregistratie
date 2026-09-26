@@ -166,6 +166,11 @@ input:focus, select:focus { outline: 2px solid var(--groen-licht); }
   color: var(--fout);
 }
 
+#plaatsHandmatig.verplicht {
+  border-color: var(--fout);
+  box-shadow: 0 0 0 1px var(--fout) inset;
+}
+
 .locatie-info {
   font-size: 0.85rem;
   color: var(--grijs);
