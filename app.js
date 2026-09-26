@@ -97,6 +97,7 @@ var els = {
   verstuurBtn: document.getElementById("verstuurBtn"),
   uploadStatus: document.getElementById("uploadStatus"),
   gpsStatus: document.getElementById("gpsStatus"),
+  gpsBadge: document.getElementById("gpsBadge"),
   locatieInfo: document.getElementById("locatieInfo"),
   gpsBtn: document.getElementById("gpsBtn"),
   gpsResetBtn: document.getElementById("gpsResetBtn"),
@@ -124,15 +125,17 @@ function updateLocatieInfo() {
     delen.push("Plaats " + els.plaatsHandmatig.value.trim() + " (handmatig)");
   }
   if (state.gps) {
-    delen.push("GPS: " + state.gps.lat.toFixed(5) + ", " + state.gps.lon.toFixed(5));
+    delen.push("📍 GPS-vastgelegd: " + state.gps.lat.toFixed(5) + ", " + state.gps.lon.toFixed(5) + " (±" + state.gps.acc + " m)");
   }
   els.locatieInfo.textContent = delen.join("  •  ");
+  if (els.gpsBadge) els.gpsBadge.classList.toggle("hidden", !state.gps);
 }
 
-function toonGpsStatus(tekst, isFout) {
+function toonGpsStatus(tekst, isFout, isOk) {
   els.gpsStatus.textContent = tekst;
   els.gpsStatus.classList.toggle("hidden", !tekst);
   els.gpsStatus.classList.toggle("waarschuwing", !!isFout);
+  els.gpsStatus.classList.toggle("ok", !!isOk);
 }
 
 function toonLocatieMelding(tekst) {
@@ -147,11 +150,11 @@ function haalGpsOp() {
     toonGpsStatus("GPS wordt niet ondersteund door dit apparaat. Vul het plaatsnummer handmatig in.", true);
     return;
   }
-  toonGpsStatus("Locatie ophalen...");
-  navigator.geolocation.getCurrentPosition(function (pos) {
-    state.gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy };
+toonGpsStatus("Locatie ophalen...", false);
+    navigator.geolocation.getCurrentPosition(function (pos) {
+    state.gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: Math.round(pos.coords.accuracy) };
     if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
-    toonGpsStatus("GPS-locatie vastgelegd (nauwkeurigheid ±" + Math.round(pos.coords.accuracy) + " m).", false);
+    toonGpsStatus("✅ GPS-locatie vastgelegd (±" + state.gps.acc + " m)", false, true);
     toonLocatieMelding("");
     updateLocatieInfo();
   }, function (fout) {
@@ -325,7 +328,9 @@ function resetForm() {
   els.opmerking.value = "";
   state.gps = null;
   els.gpsStatus.classList.add("hidden");
+  els.gpsStatus.classList.remove("ok");
   els.gpsStatus.textContent = "";
+  if (els.gpsBadge) els.gpsBadge.classList.add("hidden");
   if (els.plaatsHandmatig) els.plaatsHandmatig.value = "";
   toonLocatieMelding("");
   updateLocatieInfo();
