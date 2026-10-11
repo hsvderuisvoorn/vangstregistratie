@@ -463,7 +463,6 @@ function bouwJaaroverzicht() {
   var perSoort = {};
   var soortenSet = {};
   var perPlaats = {};
-  var perPlaatsSoort = {};
   var tabelRijen = [];
 
   for (var r2 = 1; r2 < data.length; r2++) {
@@ -473,10 +472,6 @@ function bouwJaaroverzicht() {
     var pl = String(data[r2][k.plaats] || data[r2][k.plaatsGps] || "").trim();
     if (so && aan) { perSoort[so] = (perSoort[so] || 0) + aan; soortenSet[so] = 1; }
     if (pl && aan) perPlaats[pl] = (perPlaats[pl] || 0) + aan;
-    if (pl && so && aan) {
-      if (!perPlaatsSoort[pl]) perPlaatsSoort[pl] = {};
-      perPlaatsSoort[pl][so] = (perPlaatsSoort[pl][so] || 0) + aan;
-    }
     tabelRijen.push([
       datumTekst(data[r2][k.datum]),
       so,
@@ -523,18 +518,8 @@ function bouwJaaroverzicht() {
   }
   var tabelEinde = tabelStart + (tabelRijen.length ? tabelRijen.length : 1);
 
-  /* grafieken RECHTS bovenaan, beginnend bij kolom I (9), onder elkaar */
+  /* grafiek RECHTS bovenaan, beginnend bij kolom I (9) */
   var eersteGrafiekRij = 4;
-  var opgeteld = 0;
-  var eindeEerste = eersteGrafiekRij;
-  for (var hi = eersteGrafiekRij; hi < eersteGrafiekRij + 80; hi++) {
-    var rijHoogte = tab.getRowHeight(hi);
-    if (!rijHoogte || rijHoogte <= 0) rijHoogte = 21;
-    opgeteld += rijHoogte;
-    eindeEerste = hi;
-    if (opgeteld >= 240) break;
-  }
-  var tweedeGrafiekRij = eindeEerste + 2;
 
   var grafiekDataRij = 3;
   var grafiekDataKol = 30;
@@ -545,26 +530,6 @@ function bouwJaaroverzicht() {
       "Aantal per vissoort (" + keuze + ")", soorten, waardenSoort, kleurenVoor(soorten));
     tab.hideColumns(grafiekDataKol, soorten.length + 1);
     grafiekDataKol += soorten.length + 2;
-  }
-  if (plaatsNrs.length) {
-    var labelsPlaats = [];
-    var waardenPlaats = [];
-    var kleurenPlaats = [];
-    for (var p4 = 0; p4 < plaatsNrs.length; p4++) {
-      var pn = plaatsNrs[p4];
-      labelsPlaats.push("Plaats " + pn);
-      waardenPlaats.push(0);
-      kleurenPlaats.push("#FFFFFF");
-      var soortenHier = Object.keys(perPlaatsSoort[pn] || {}).sort();
-      for (var sp = 0; sp < soortenHier.length; sp++) {
-        labelsPlaats.push(soortenHier[sp]);
-        waardenPlaats.push(perPlaatsSoort[pn][soortenHier[sp]]);
-        kleurenPlaats.push(KLEUR_PER_SOORT[soortenHier[sp]] || "#BDBDBD");
-      }
-    }
-    voegGekleurdeKolommen(tab, grafiekDataRij, grafiekDataKol, tweedeGrafiekRij, 9, 460, 240,
-      "Vangsten per plaats en soort (" + keuze + ")", labelsPlaats, waardenPlaats, kleurenPlaats);
-    tab.hideColumns(grafiekDataKol, labelsPlaats.length + 1);
   }
 }
 
