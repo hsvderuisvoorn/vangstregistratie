@@ -362,6 +362,41 @@ function isDonker(hex) {
   return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
 }
 
+/* Bouwt een kolomgrafiek waarin de labels op de x-as staan (de naam onder elke
+   kolom) en elke kolom de eigen kleur krijgt. Een grafiek kleurt alleen per
+   REEKS, dus krijgt elk label een eigen reeks met de waarde alleen in zijn eigen
+   kolom; gestapeld valt dat netjes samen tot één gekleurde kolom per label.
+   De datatabel komt op rij `dataRij`, kolom `dataKol` (die de aanroeper daarna
+   verbergt). Geeft de breedte (aantal kolommen) van die datatabel terug. */
+function voegGekleurdeKolommen(blad, dataRij, dataKol, ankerRij, ankerKol, breedte, hoogte, titel, labels, waarden, kleuren) {
+  var n = labels.length;
+  var blok = [["Soort"].concat(labels)];
+  for (var i = 0; i < n; i++) {
+    var rij = [labels[i]];
+    for (var j = 0; j < n; j++) {
+      rij.push(j === i ? waarden[i] : 0);
+    }
+    blok.push(rij);
+  }
+  blad.getRange(dataRij, dataKol, blok.length, blok[0].length).setValues(blok);
+  blad.insertChart(blad.newChart()
+    .setChartType(Charts.ChartType.COLUMN)
+    .addRange(blad.getRange(dataRij, dataKol, blok.length, blok[0].length))
+    .setNumHeaders(1)
+    .setOption("title", titel)
+    .setOption("vAxis.title", "Aantal")
+    .setOption("isStacked", true)
+    .setOption("legend", { position: "none" })
+    .setOption("tooltip", { trigger: "none" })
+    .setOption("colors", kleuren)
+    .setOption("hAxis", { slantedText: true, slantedTextAngle: 45, textStyle: { fontSize: 11 } })
+    .setOption("width", breedte)
+    .setOption("height", hoogte)
+    .setPosition(ankerRij, ankerKol, 0, 0)
+    .build());
+  return blok[0].length;
+}
+
 function werkGrafiekenBij() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var bron = ss.getSheetByName("Vangsten");
@@ -496,17 +531,11 @@ function bouwJaaroverzicht() {
   var tweedeGrafiekRij = eindeEerste + 2;
 
   if (soorten.length) {
-    tab.insertChart(tab.newChart()
-      .setChartType(Charts.ChartType.COLUMN)
-      .addRange(tab.getRange(mini + 1, 1, soorten.length + 1, 2))
-      .setNumHeaders(1)
-      .setOption("title", "Aantal per vissoort (" + keuze + ")")
-      .setOption("legend", { position: "none" })
-      .setOption("colors", kleurenVoor(soorten))
-      .setOption("width", 460)
-      .setOption("height", 240)
-      .setPosition(eersteGrafiekRij, 9, 0, 0)
-      .build());
+    var waardenSoort = [];
+    for (var s4 = 0; s4 < soorten.length; s4++) waardenSoort.push(perSoort[soorten[s4]]);
+    voegGekleurdeKolommen(tab, 3, 30, eersteGrafiekRij, 9, 460, 240,
+      "Aantal per vissoort (" + keuze + ")", soorten, waardenSoort, kleurenVoor(soorten));
+    tab.hideColumns(30, soorten.length + 1);
   }
   if (plaatsNrs.length) {
     tab.insertChart(tab.newChart()
@@ -629,40 +658,19 @@ function bouwGrafiekJaar(data) {
   for (var jr = 0; jr < jaren.length; jr++) {
     var jaarNu = jaren[jr];
     var soortenJaar = [];
+    var waardenJaar = [];
     for (var sx = 0; sx < soorten.length; sx++) {
-      if ((perJaar[jaarNu][soorten[sx]] || 0) > 0) soortenJaar.push(soorten[sx]);
-    }
-    var nJaar = soortenJaar.length;
-    var blok = [["Soort"].concat(soortenJaar)];
-    for (var ri = 0; ri < nJaar; ri++) {
-      var rijWaarden = [soortenJaar[ri]];
-      for (var ci = 0; ci < nJaar; ci++) {
-        rijWaarden.push(ci === ri ? perJaar[jaarNu][soortenJaar[ri]] : 0);
+      if ((perJaar[jaarNu][soorten[sx]] || 0) > 0) {
+        soortenJaar.push(soorten[sx]);
+        waardenJaar.push(perJaar[jaarNu][soorten[sx]]);
       }
-      blok.push(rijWaarden);
     }
-    blad.getRange(hulpRij, 40, blok.length, blok[0].length).setValues(blok);
-    if (blok[0].length > hulpBreedte) hulpBreedte = blok[0].length;
-
     var gridRij = 3 + Math.floor(jr / 2) * 17;
     var gridKol = startKol + (jr % 2) * 8;
-    blad.insertChart(blad.newChart()
-      .setChartType(Charts.ChartType.COLUMN)
-      .addRange(blad.getRange(hulpRij, 40, blok.length, blok[0].length))
-      .setNumHeaders(1)
-      .setOption("title", "Vangsten " + jaarNu + " per vissoort")
-      .setOption("vAxis.title", "Aantal")
-      .setOption("isStacked", true)
-      .setOption("legend", { position: "none" })
-      .setOption("tooltip", { trigger: "none" })
-      .setOption("colors", kleurenVoor(soortenJaar))
-      .setOption("hAxis", { slantedText: true, slantedTextAngle: 45, textStyle: { fontSize: 11 } })
-      .setOption("width", 460)
-      .setOption("height", 300)
-      .setPosition(gridRij, gridKol, 0, 0)
-      .build());
-
-    hulpRij += blok.length + 1;
+    var breedteBlok = voegGekleurdeKolommen(blad, hulpRij, 40, gridRij, gridKol, 460, 300,
+      "Vangsten " + jaarNu + " per vissoort", soortenJaar, waardenJaar, kleurenVoor(soortenJaar));
+    if (breedteBlok > hulpBreedte) hulpBreedte = breedteBlok;
+    hulpRij += breedteBlok + 1;
   }
   blad.hideColumns(40, hulpBreedte);
 
@@ -721,14 +729,18 @@ function bouwGrafiekPlaats(data) {
   // 3 diagrammen per rij om het compacter te houden
   var kolomBlok = 6;   // kolommen breed per diagram
   var diagramW = 560;  // pixels breed
-  var diagramH = 300;  // pixels hoog (ruimte voor de legenda)
+  var diagramH = 300;  // pixels hoog
   var startRij = 3;
-  var dataKolom = 20;  // plek (rechts, uit het zicht) voor de data per diagram
+  var dataKolom = 20;  // plek (rechts, uit het zicht) voor de datatabellen
+  var dataRij = 3;
+  var dataBreedte = 0;
 
   for (var i = 0; i < plaatsNrs.length; i++) {
     var nr2 = plaatsNrs[i];
     var soorten = perPlaats[nr2];
     var soortNamen = Object.keys(soorten).sort();
+    var waarden = [];
+    for (var s = 0; s < soortNamen.length; s++) waarden.push(soorten[soortNamen[s]]);
 
     var rij = startRij + Math.floor(i / 3) * 40;
     var kolom = 1 + (i % 3) * kolomBlok;
@@ -737,31 +749,12 @@ function bouwGrafiekPlaats(data) {
     titel.setValue("Plaats " + nr2);
     titel.setFontWeight("bold");
 
-    // data van dit diagram: elke soort is een eigen reeks (net als in Grafiek - Jaar)
-    // 3 rijen per blok zodat de data van elk diagram elkaar niet overschrijft
-    var dataRij = 3 + i * 3;
-    var kop = ["Plaats"].concat(soortNamen);
-    var waarden = ["Plaats " + nr2];
-    for (var s = 0; s < soortNamen.length; s++) waarden.push(soorten[soortNamen[s]]);
-    graf.getRange(dataRij, dataKolom, 1, 1 + soortNamen.length).setValues([kop]);
-    graf.getRange(dataRij + 1, dataKolom, 1, 1 + soortNamen.length).setValues([waarden]);
-
-    var bereik = graf.getRange(dataRij, dataKolom, 2, 1 + soortNamen.length);
-    var chart = graf.newChart()
-      .setChartType(Charts.ChartType.COLUMN)
-      .addRange(bereik)
-      .setNumHeaders(1)
-      .setOption("title", "Plaats " + nr2)
-      .setOption("vAxis.title", "Aantal")
-      .setOption("isStacked", false)
-      .setOption("colors", kleurenVoor(soortNamen))
-      .setOption("legend", { position: "top", maxLines: 3, textStyle: { fontSize: 11 } })
-      .setOption("width", diagramW)
-      .setOption("height", diagramH)
-      .setPosition(rij + 1, kolom, 0, 0)
-      .build();
-    graf.insertChart(chart);
+    var breedteBlok = voegGekleurdeKolommen(graf, dataRij, dataKolom, rij + 1, kolom, diagramW, diagramH,
+      "Plaats " + nr2, soortNamen, waarden, kleurenVoor(soortNamen));
+    if (breedteBlok > dataBreedte) dataBreedte = breedteBlok;
+    dataRij += breedteBlok + 1;
   }
+  graf.hideColumns(dataKolom, dataBreedte);
 }
 
 function verversGrafieken() {
