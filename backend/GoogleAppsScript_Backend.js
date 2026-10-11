@@ -617,22 +617,42 @@ function bouwGrafiekJaar(data) {
   }
   blad.getRange(3, 1, nRijen, nKol).setValues(inhoud);
 
-  var bereik = blad.getRange(3, 1, nRijen, nKol);
-  var chart = blad.newChart()
-    .setChartType(Charts.ChartType.COLUMN)
-    .addRange(bereik)
-    .setNumHeaders(1)
-    .setOption("title", "Vangsten per jaar per vissoort")
-    .setOption("hAxis.title", "Jaar")
-    .setOption("vAxis.title", "Aantal")
-    .setOption("isStacked", false)
-    .setOption("colors", kleurenVoor(soorten))
-    .setOption("legend", { position: "top", maxLines: 5, textStyle: { fontSize: 12, bold: true } })
-    .setOption("width", 900)
-    .setOption("height", 460)
-    .setPosition(3, nKol + 3, 0, 0)
-    .build();
-  blad.insertChart(chart);
+  /* per jaar een eigen kolomgrafiek: de soorten staan op de x-as, zodat de
+     naam onder elke gekleurde kolom komt te staan (i.p.v. een kleurlegenda
+     bovenaan). De kleur per soort blijft ongewijzigd. */
+  var startKol = nKol + 3;
+  var hulpRij = 3;
+  for (var jr = 0; jr < jaren.length; jr++) {
+    var jaarNu = jaren[jr];
+    var soortenJaar = [];
+    for (var sx = 0; sx < soorten.length; sx++) {
+      if ((perJaar[jaarNu][soorten[sx]] || 0) > 0) soortenJaar.push(soorten[sx]);
+    }
+    var mini = [["Soort", "Aantal"]];
+    for (var sy = 0; sy < soortenJaar.length; sy++) {
+      mini.push([soortenJaar[sy], perJaar[jaarNu][soortenJaar[sy]]]);
+    }
+    blad.getRange(hulpRij, 40, mini.length, 2).setValues(mini);
+
+    var gridRij = 3 + Math.floor(jr / 2) * 17;
+    var gridKol = startKol + (jr % 2) * 8;
+    blad.insertChart(blad.newChart()
+      .setChartType(Charts.ChartType.COLUMN)
+      .addRange(blad.getRange(hulpRij, 40, mini.length, 2))
+      .setNumHeaders(1)
+      .setOption("title", "Vangsten " + jaarNu + " per vissoort")
+      .setOption("vAxis.title", "Aantal")
+      .setOption("legend", { position: "none" })
+      .setOption("colors", kleurenVoor(soortenJaar))
+      .setOption("hAxis", { slantedText: true, slantedTextAngle: 45, textStyle: { fontSize: 11 } })
+      .setOption("width", 460)
+      .setOption("height", 300)
+      .setPosition(gridRij, gridKol, 0, 0)
+      .build());
+
+    hulpRij += mini.length + 1;
+  }
+  blad.hideColumns(40, 2);
 
   // kleurensleutel: elke vissoort op een cel met zijn eigen kleur
   var legStart = 3 + nRijen + 2;
