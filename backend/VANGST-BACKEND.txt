@@ -619,30 +619,42 @@ function bouwGrafiekJaar(data) {
 
   /* per jaar een eigen kolomgrafiek: de soorten staan op de x-as, zodat de
      naam onder elke gekleurde kolom komt te staan (i.p.v. een kleurlegenda
-     bovenaan). De kleur per soort blijft ongewijzigd. */
+     bovenaan). Omdat een Google-grafiek alleen per REEKS een kleur toekent,
+     krijgt elke soort een eigen reeks met de waarde alleen in zijn eigen
+     kolom; gestapeld valt dat netjes samen tot één gekleurde kolom per soort.
+     Zo behoudt elke vissoort zijn eigen kleur. */
   var startKol = nKol + 3;
   var hulpRij = 3;
+  var hulpBreedte = 0;
   for (var jr = 0; jr < jaren.length; jr++) {
     var jaarNu = jaren[jr];
     var soortenJaar = [];
     for (var sx = 0; sx < soorten.length; sx++) {
       if ((perJaar[jaarNu][soorten[sx]] || 0) > 0) soortenJaar.push(soorten[sx]);
     }
-    var mini = [["Soort", "Aantal"]];
-    for (var sy = 0; sy < soortenJaar.length; sy++) {
-      mini.push([soortenJaar[sy], perJaar[jaarNu][soortenJaar[sy]]]);
+    var nJaar = soortenJaar.length;
+    var blok = [["Soort"].concat(soortenJaar)];
+    for (var ri = 0; ri < nJaar; ri++) {
+      var rijWaarden = [soortenJaar[ri]];
+      for (var ci = 0; ci < nJaar; ci++) {
+        rijWaarden.push(ci === ri ? perJaar[jaarNu][soortenJaar[ri]] : 0);
+      }
+      blok.push(rijWaarden);
     }
-    blad.getRange(hulpRij, 40, mini.length, 2).setValues(mini);
+    blad.getRange(hulpRij, 40, blok.length, blok[0].length).setValues(blok);
+    if (blok[0].length > hulpBreedte) hulpBreedte = blok[0].length;
 
     var gridRij = 3 + Math.floor(jr / 2) * 17;
     var gridKol = startKol + (jr % 2) * 8;
     blad.insertChart(blad.newChart()
       .setChartType(Charts.ChartType.COLUMN)
-      .addRange(blad.getRange(hulpRij, 40, mini.length, 2))
+      .addRange(blad.getRange(hulpRij, 40, blok.length, blok[0].length))
       .setNumHeaders(1)
       .setOption("title", "Vangsten " + jaarNu + " per vissoort")
       .setOption("vAxis.title", "Aantal")
+      .setOption("isStacked", true)
       .setOption("legend", { position: "none" })
+      .setOption("tooltip", { trigger: "none" })
       .setOption("colors", kleurenVoor(soortenJaar))
       .setOption("hAxis", { slantedText: true, slantedTextAngle: 45, textStyle: { fontSize: 11 } })
       .setOption("width", 460)
@@ -650,9 +662,9 @@ function bouwGrafiekJaar(data) {
       .setPosition(gridRij, gridKol, 0, 0)
       .build());
 
-    hulpRij += mini.length + 1;
+    hulpRij += blok.length + 1;
   }
-  blad.hideColumns(40, 2);
+  blad.hideColumns(40, hulpBreedte);
 
   // kleurensleutel: elke vissoort op een cel met zijn eigen kleur
   var legStart = 3 + nRijen + 2;
