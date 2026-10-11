@@ -353,6 +353,17 @@ function kleurenVoor(soorten) {
   return soorten.map(function (s) { return KLEUR_PER_SOORT[s] || "#BDBDBD"; });
 }
 
+/* Algemene kleurenreeks voor grafieken zonder vaste kleur per label (bijv. per plaats). */
+var PALET = ["#1E88E5", "#E53935", "#2E7D32", "#FB8C00", "#8E24AA", "#00897B",
+  "#FDD835", "#6D4C41", "#3949AB", "#D81B60", "#00ACC1", "#7CB342",
+  "#F4511E", "#5E35B1", "#C0CA33", "#546E7A"];
+
+function kleurenVoorAantal(n) {
+  var uit = [];
+  for (var i = 0; i < n; i++) uit.push(PALET[i % PALET.length]);
+  return uit;
+}
+
 function isDonker(hex) {
   var c = String(hex || "#FFFFFF").replace("#", "");
   if (c.length !== 6) return false;
@@ -530,25 +541,22 @@ function bouwJaaroverzicht() {
   }
   var tweedeGrafiekRij = eindeEerste + 2;
 
+  var grafiekDataRij = 3;
+  var grafiekDataKol = 30;
   if (soorten.length) {
     var waardenSoort = [];
     for (var s4 = 0; s4 < soorten.length; s4++) waardenSoort.push(perSoort[soorten[s4]]);
-    voegGekleurdeKolommen(tab, 3, 30, eersteGrafiekRij, 9, 460, 240,
+    voegGekleurdeKolommen(tab, grafiekDataRij, grafiekDataKol, eersteGrafiekRij, 9, 460, 240,
       "Aantal per vissoort (" + keuze + ")", soorten, waardenSoort, kleurenVoor(soorten));
-    tab.hideColumns(30, soorten.length + 1);
+    tab.hideColumns(grafiekDataKol, soorten.length + 1);
+    grafiekDataKol += soorten.length + 2;
   }
   if (plaatsNrs.length) {
-    tab.insertChart(tab.newChart()
-      .setChartType(Charts.ChartType.COLUMN)
-      .addRange(tab.getRange(mini + 1, 4, plaatsNrs.length + 1, 2))
-      .setNumHeaders(1)
-      .setOption("title", "Totaal per plaats (" + keuze + ")")
-      .setOption("legend", { position: "none" })
-      .setOption("colors", ["#2E7D32"])
-      .setOption("width", 460)
-      .setOption("height", 240)
-      .setPosition(tweedeGrafiekRij, 9, 0, 0)
-      .build());
+    var waardenPlaats = [];
+    for (var p4 = 0; p4 < plaatsNrs.length; p4++) waardenPlaats.push(perPlaats[plaatsNrs[p4]]);
+    voegGekleurdeKolommen(tab, grafiekDataRij, grafiekDataKol, tweedeGrafiekRij, 9, 460, 240,
+      "Totaal per plaats (" + keuze + ")", plaatsNrs, waardenPlaats, kleurenVoorAantal(plaatsNrs.length));
+    tab.hideColumns(grafiekDataKol, plaatsNrs.length + 1);
   }
 }
 
